@@ -1,11 +1,96 @@
 import { PDFDocument, rgb, degrees, StandardFonts } from "pdf-lib";
 
+// Robust PDF loader that handles offset headers, BOMs, prepended bytes, and non-PDF fallbacks
+export async function cleanAndLoadPdf(arrayBuffer: ArrayBuffer): Promise<PDFDocument> {
+  const bytes = new Uint8Array(arrayBuffer);
+
+  // Look for '%PDF-' signature (0x25, 0x50, 0x44, 0x46, 0x2D)
+  let headerIndex = -1;
+  for (let i = 0; i <= bytes.length - 5; i++) {
+    if (
+      bytes[i] === 0x25 &&
+      bytes[i + 1] === 0x50 &&
+      bytes[i + 2] === 0x44 &&
+      bytes[i + 3] === 0x46 &&
+      bytes[i + 4] === 0x2d
+    ) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  if (headerIndex !== -1) {
+    const validPdfBuffer =
+      headerIndex === 0 ? arrayBuffer : arrayBuffer.slice(headerIndex);
+    try {
+      return await PDFDocument.load(validPdfBuffer, {
+        ignoreEncryption: true,
+        updateMetadata: false,
+      });
+    } catch {
+      return await PDFDocument.load(validPdfBuffer);
+    }
+  }
+
+  // Check if user uploaded an image instead (PNG or JPEG)
+  const isPng =
+    bytes.length > 4 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47;
+  const isJpg =
+    bytes.length > 3 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff;
+
+  if (isPng || isJpg) {
+    const doc = await PDFDocument.create();
+    let embeddedImg;
+    if (isPng) {
+      embeddedImg = await doc.embedPng(arrayBuffer);
+    } else {
+      embeddedImg = await doc.embedJpg(arrayBuffer);
+    }
+    const page = doc.addPage([embeddedImg.width, embeddedImg.height]);
+    page.drawImage(embeddedImg, {
+      x: 0,
+      y: 0,
+      width: embeddedImg.width,
+      height: embeddedImg.height,
+    });
+    return doc;
+  }
+
+  // If text or other document
+  try {
+    const text = new TextDecoder().decode(bytes);
+    if (text && text.trim().length > 0) {
+      const doc = await PDFDocument.create();
+      const page = doc.addPage([595.28, 841.89]);
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      page.drawText(text.slice(0, 3000), {
+        x: 50,
+        y: 800,
+        size: 11,
+        font,
+      });
+      return doc;
+    }
+  } catch {}
+
+  throw new Error(
+    "Invalid PDF file: The uploaded file does not contain a valid %PDF- header. Please ensure you are uploading a valid .pdf document."
+  );
+}
+
 export async function mergePDFs(files: File[]): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
 
   for (const file of files) {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await PDFDocument.load(arrayBuffer);
+    const pdf = await cleanAndLoadPdf(arrayBuffer);
     const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
     copiedPages.forEach((page) => mergedPdf.addPage(page));
   }
@@ -18,7 +103,7 @@ export async function splitPDF(
   pageRanges: string // e.g. "1-3, 5" (1-indexed)
 ): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
-  const srcPdf = await PDFDocument.load(arrayBuffer);
+  const srcPdf = await cleanAndLoadPdf(arrayBuffer);
   const totalPages = srcPdf.getPageCount();
 
   const pagesToExtract = new Set<number>();
@@ -53,7 +138,7 @@ export async function splitPDF(
 
 export async function rotatePDF(file: File, angleDeg: number = 90): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await PDFDocument.load(arrayBuffer);
+  const pdf = await cleanAndLoadPdf(arrayBuffer);
   const pages = pdf.getPages();
 
   pages.forEach((page) => {
@@ -70,7 +155,7 @@ export async function addWatermarkPDF(
   opacity: number = 0.35
 ): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await PDFDocument.load(arrayBuffer);
+  const pdf = await cleanAndLoadPdf(arrayBuffer);
   const font = await pdf.embedFont(StandardFonts.HelveticaBold);
   const pages = pdf.getPages();
 
@@ -99,7 +184,7 @@ export async function addPageNumbersPDF(
   position: "bottom-center" | "bottom-right" | "top-right" = "bottom-center"
 ): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await PDFDocument.load(arrayBuffer);
+  const pdf = await cleanAndLoadPdf(arrayBuffer);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const pages = pdf.getPages();
   const total = pages.length;
@@ -162,7 +247,7 @@ export async function imagesToPDF(imageFiles: File[]): Promise<Uint8Array> {
 
 export async function removePagesPDF(file: File, pagesToRemove: number[]): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await PDFDocument.load(arrayBuffer);
+  const pdf = await cleanAndLoadPdf(arrayBuffer);
   const total = pdf.getPageCount();
 
   // Convert 1-indexed to 0-indexed and sort descending to avoid index shifts

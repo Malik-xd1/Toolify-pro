@@ -35,6 +35,7 @@ import {
   imagesToPDF,
   removePagesPDF,
   downloadBlob,
+  cleanAndLoadPdf,
 } from "@/utils/pdfTools";
 import { PDFDocument } from "pdf-lib";
 import JSZip from "jszip";
@@ -495,7 +496,7 @@ export default function ToolWorkbench({
         if (pdfPassword !== pdfConfirmPassword) throw new Error("Passwords do not match");
         setProgress(40);
         const arrayBuf = await files[0].arrayBuffer();
-        const pdfDoc = await PDFDocument.load(arrayBuf);
+        const pdfDoc = await cleanAndLoadPdf(arrayBuf);
         pdfDoc.setTitle(`Protected - ${files[0].name}`);
         pdfDoc.setAuthor("YourTools Protected Document");
         pdfDoc.setSubject("Protected with AES-256 Encryption");
