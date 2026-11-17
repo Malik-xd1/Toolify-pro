@@ -9,6 +9,7 @@ interface FooterProps {
   onOpenFileLocker: () => void;
   onOpenAbout: () => void;
   onOpenContact: () => void;
+  onOpenLegal?: (docType: "privacy" | "terms" | "disclaimer") => void;
 }
 
 export default function Footer({
@@ -16,6 +17,7 @@ export default function Footer({
   onOpenFileLocker,
   onOpenAbout,
   onOpenContact,
+  onOpenLegal,
 }: FooterProps) {
   return (
     <footer className="bg-[#050917] text-white border-t border-blue-950/60 pt-12 pb-8">
@@ -168,17 +170,26 @@ export default function Footer({
           <div>© 2025 YourTools. All rights reserved.</div>
 
           <div className="flex items-center gap-4 text-slate-400">
-            <a href="#" className="hover:text-white transition-colors">
+            <button
+              onClick={() => onOpenLegal && onOpenLegal("privacy")}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               Privacy Policy
-            </a>
+            </button>
             <span>|</span>
-            <a href="#" className="hover:text-white transition-colors">
+            <button
+              onClick={() => onOpenLegal && onOpenLegal("terms")}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               Terms of Service
-            </a>
+            </button>
             <span>|</span>
-            <a href="#" className="hover:text-white transition-colors">
+            <button
+              onClick={() => onOpenLegal && onOpenLegal("disclaimer")}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               Disclaimer
-            </a>
+            </button>
           </div>
 
           <div className="font-script text-cyan-400 text-lg sm:text-xl font-bold tracking-wide">

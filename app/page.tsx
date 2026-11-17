@@ -14,6 +14,7 @@ import AllToolsModal from "@/components/AllToolsModal";
 import FileLockerModal from "@/components/FileLockerModal";
 import AboutModal from "@/components/AboutModal";
 import ContactModal from "@/components/ContactModal";
+import LegalModal, { LegalDocType } from "@/components/LegalModal";
 import { ToolCategory } from "@/data/toolsData";
 
 export default function Home() {
@@ -23,6 +24,7 @@ export default function Home() {
   const [isFileLockerOpen, setIsFileLockerOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const [legalModalDoc, setLegalModalDoc] = useState<LegalDocType | null>(null);
 
   const handleOpenTool = (toolId: string) => {
     if (toolId === "file-locker" || toolId === "pdf-locker") {
@@ -79,6 +81,7 @@ export default function Home() {
         onOpenFileLocker={() => setIsFileLockerOpen(true)}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
+        onOpenLegal={(doc) => setLegalModalDoc(doc)}
       />
 
       {/* Modals & Workbenches */}
@@ -115,6 +118,13 @@ export default function Home() {
       <ContactModal
         isOpen={isContactOpen}
         onClose={() => setIsContactOpen(false)}
+      />
+
+      {/* Legal & Compliance Modal */}
+      <LegalModal
+        isOpen={!!legalModalDoc}
+        onClose={() => setLegalModalDoc(null)}
+        docType={legalModalDoc || "privacy"}
       />
     </main>
   );
