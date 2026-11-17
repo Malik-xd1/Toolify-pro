@@ -73,14 +73,19 @@ export default function Navbar({
   };
 
   useEffect(() => {
-    if (
-      localStorage.theme === "dark" ||
-      (!("theme" in localStorage) &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-    ) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add("dark");
-    } else {
+    try {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        setIsDarkMode(true);
+        document.documentElement.classList.add("dark");
+      } else {
+        setIsDarkMode(false);
+        document.documentElement.classList.remove("dark");
+        if (!savedTheme) {
+          localStorage.setItem("theme", "light");
+        }
+      }
+    } catch (_) {
       setIsDarkMode(false);
       document.documentElement.classList.remove("dark");
     }
@@ -89,11 +94,15 @@ export default function Navbar({
   const toggleTheme = () => {
     if (isDarkMode) {
       document.documentElement.classList.remove("dark");
-      localStorage.theme = "light";
+      try {
+        localStorage.setItem("theme", "light");
+      } catch (_) {}
       setIsDarkMode(false);
     } else {
       document.documentElement.classList.add("dark");
-      localStorage.theme = "dark";
+      try {
+        localStorage.setItem("theme", "dark");
+      } catch (_) {}
       setIsDarkMode(true);
     }
   };
@@ -447,20 +456,29 @@ export default function Navbar({
 
         {/* 3. Right Section: Theme Toggle Switch */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div
+          <button
+            type="button"
             onClick={toggleTheme}
             className="relative w-14 h-7 bg-[#0a122e] border border-cyan-500/40 rounded-full p-0.5 cursor-pointer flex items-center justify-between select-none shadow-[0_0_10px_rgba(6,182,212,0.2)] hover:border-cyan-400 transition-all"
-            title="Toggle Light / Dark Mode"
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle Light / Dark Mode"
           >
             {/* Sun Icon on the left */}
-            <div className="w-6 h-6 flex items-center justify-center text-amber-300 pl-0.5">
+            <div className="w-6 h-6 flex items-center justify-center text-amber-300">
               <Sun className="w-3.5 h-3.5" />
+            </div>
+
+            {/* Moon Icon on the right */}
+            <div className="w-6 h-6 flex items-center justify-center text-cyan-300">
+              <Moon className="w-3.5 h-3.5" />
             </div>
 
             {/* Sliding Thumb */}
             <div
-              className={`absolute top-0.5 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/50 transition-all duration-300 ${
-                isDarkMode ? "right-0.5" : "left-0.5 bg-cyan-500"
+              className={`absolute top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md transition-all duration-300 ${
+                isDarkMode
+                  ? "right-0.5 bg-blue-600 shadow-blue-500/50"
+                  : "left-0.5 bg-amber-500 shadow-amber-500/50"
               }`}
             >
               {isDarkMode ? (
@@ -469,7 +487,7 @@ export default function Navbar({
                 <Sun className="w-3 h-3 fill-white" />
               )}
             </div>
-          </div>
+          </button>
 
           {/* Mobile Menu Hamburger (Visible on mobile/tablet) */}
           <button

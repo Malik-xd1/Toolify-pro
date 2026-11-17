@@ -73,10 +73,10 @@ export default function Hero({ onSelectTool }: HeroProps) {
   };
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#060b1e] via-[#091338] to-[#0a122e] text-white pt-12 pb-24 lg:pt-16 lg:pb-32">
+    <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white dark:from-[#060b1e] dark:via-[#091338] dark:to-[#0a122e] text-slate-900 dark:text-white pt-12 pb-24 lg:pt-16 lg:pb-32 transition-colors duration-200">
       {/* Background Neon Glow Light Streaks */}
-      <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-blue-600/15 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[450px] bg-cyan-500/15 blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-blue-500/10 dark:bg-blue-600/15 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[450px] bg-cyan-400/10 dark:bg-cyan-500/15 blur-[130px] rounded-full pointer-events-none" />
 
       {/* Subtle curved light beam lines */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -117,21 +117,21 @@ export default function Hero({ onSelectTool }: HeroProps) {
           {/* Left Column: Heading, Subtitle, Search, Popular Searches */}
           <div className="lg:col-span-7 flex flex-col items-start text-left">
             {/* Pill Badge: 100+ Powerful Tools */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold mb-6 shadow-sm">
-              <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold mb-6 shadow-sm">
+              <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
               <span>100+ Powerful Tools</span>
             </div>
 
             {/* Main Heading */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-5 text-white">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-5 text-slate-900 dark:text-white">
               Every Tool You Need.
-              <span className="block mt-1 bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500 bg-clip-text text-transparent drop-shadow-sm">
+              <span className="block mt-1 bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 dark:from-cyan-300 dark:via-sky-400 dark:to-blue-500 bg-clip-text text-transparent drop-shadow-sm">
                 One Powerful Platform.
               </span>
             </h1>
 
             {/* Subheading */}
-            <p className="text-base sm:text-lg text-slate-300 max-w-xl font-normal leading-relaxed mb-8">
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-xl font-normal leading-relaxed mb-8">
               Convert, edit, secure, organize and manage your digital files with
               ease – all in one place.
             </p>
@@ -139,7 +139,7 @@ export default function Hero({ onSelectTool }: HeroProps) {
             {/* Search Box Bar */}
             <div ref={searchRef} className="w-full max-w-xl relative mb-6">
               <form onSubmit={handleSearchSubmit}>
-                <div className="bg-white rounded-full shadow-2xl p-1.5 pl-6 flex items-center justify-between border-2 border-transparent focus-within:border-cyan-400 focus-within:ring-4 focus-within:ring-cyan-500/20 transition-all">
+                <div className="bg-white dark:bg-slate-900/90 rounded-full shadow-xl shadow-blue-500/10 dark:shadow-2xl p-1.5 pl-6 flex items-center justify-between border-2 border-slate-200 dark:border-transparent focus-within:border-blue-500 dark:focus-within:border-cyan-400 focus-within:ring-4 focus-within:ring-blue-500/20 dark:focus-within:ring-cyan-500/20 transition-all">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Search className="w-5 h-5 text-slate-400 flex-shrink-0" />
                     <input
@@ -147,7 +147,7 @@ export default function Hero({ onSelectTool }: HeroProps) {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search for any tool... (e.g. PDF to Word, Image Resize)"
-                      className="w-full bg-transparent text-slate-900 placeholder-slate-400 text-sm sm:text-base outline-none pr-2 font-medium"
+                      className="w-full bg-transparent text-slate-900 dark:text-white placeholder-slate-400 text-sm sm:text-base outline-none pr-2 font-medium"
                     />
                   </div>
                   <button
@@ -162,7 +162,7 @@ export default function Hero({ onSelectTool }: HeroProps) {
 
               {/* Instant Search Results Dropdown */}
               {isSearchOpen && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-[#0c132c] border border-blue-900/60 rounded-2xl shadow-2xl overflow-hidden z-50 divide-y divide-blue-950/80 backdrop-blur-xl">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#0c132c] border border-slate-200 dark:border-blue-900/60 rounded-2xl shadow-2xl overflow-hidden z-50 divide-y divide-slate-100 dark:divide-blue-950/80 backdrop-blur-xl">
                   {searchResults.map((tool) => (
                     <div
                       key={tool.id}
@@ -171,7 +171,7 @@ export default function Hero({ onSelectTool }: HeroProps) {
                         setIsSearchOpen(false);
                         setSearchQuery("");
                       }}
-                      className="p-3.5 px-5 hover:bg-blue-600/20 cursor-pointer flex items-center justify-between group transition-colors"
+                      className="p-3.5 px-5 hover:bg-blue-50 dark:hover:bg-blue-600/20 cursor-pointer flex items-center justify-between group transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div
@@ -181,15 +181,15 @@ export default function Hero({ onSelectTool }: HeroProps) {
                           {tool.category.toUpperCase().slice(0, 3)}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors">
                             {tool.name}
                           </div>
-                          <div className="text-xs text-slate-400 line-clamp-1">
+                          <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
                             {tool.description}
                           </div>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />
+                      <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />
                     </div>
                   ))}
                 </div>
@@ -198,14 +198,14 @@ export default function Hero({ onSelectTool }: HeroProps) {
 
             {/* Popular Searches */}
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-amber-400 font-semibold flex items-center gap-1 mr-1">
+              <span className="text-amber-500 dark:text-amber-400 font-semibold flex items-center gap-1 mr-1">
                 🔥 Popular Searches:
               </span>
               {popularSearches.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => onSelectTool(item.id)}
-                  className="bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/30 transition-all font-medium backdrop-blur-sm"
+                  className="bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/80 shadow-sm dark:bg-white/10 dark:hover:bg-white/20 dark:text-slate-200 dark:hover:text-white dark:border-white/10 px-3 py-1.5 rounded-full transition-all font-medium backdrop-blur-sm"
                 >
                   {item.label}
                 </button>
@@ -217,9 +217,9 @@ export default function Hero({ onSelectTool }: HeroProps) {
           <div className="lg:col-span-5 relative flex flex-col items-center justify-center">
             {/* Top handwriting script accent */}
             <div className="w-full flex justify-end pr-4 mb-2">
-              <span className="font-script text-3xl sm:text-4xl text-white -rotate-6 tracking-wide drop-shadow-[0_2px_10px_rgba(34,211,238,0.5)] select-none">
+              <span className="font-script text-3xl sm:text-4xl text-slate-900 dark:text-white -rotate-6 tracking-wide drop-shadow-sm select-none">
                 Work Smarter, <br />
-                <span className="pl-6 text-cyan-300">Not Harder!</span>
+                <span className="pl-6 text-blue-600 dark:text-cyan-300">Not Harder!</span>
               </span>
             </div>
 
