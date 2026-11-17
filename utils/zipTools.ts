@@ -33,6 +33,7 @@ export async function createZipArchive(
 export async function readZipArchive(zipFile: File): Promise<{
   entries: ZipEntryItem[];
   extractFile: (filename: string) => Promise<Blob>;
+  extractAllFiles: (onProgress?: (current: number, total: number) => void) => Promise<{ name: string; blob: Blob }[]>;
 }> {
   const arrayBuffer = await zipFile.arrayBuffer();
   const zip = await JSZip.loadAsync(arrayBuffer);
@@ -54,5 +55,25 @@ export async function readZipArchive(zipFile: File): Promise<{
     return await file.async("blob");
   };
 
-  return { entries, extractFile };
+  const extractAllFiles = async (
+    onProgress?: (current: number, total: number) => void
+  ): Promise<{ name: string; blob: Blob }[]> => {
+    const nonDirFiles = entries.filter((e) => !e.dir);
+    const results: { name: string; blob: Blob }[] = [];
+    let count = 0;
+
+    for (const entry of nonDirFiles) {
+      const file = zip.file(entry.name);
+      if (file) {
+        const blob = await file.async("blob");
+        results.push({ name: entry.name, blob });
+      }
+      count++;
+      if (onProgress) onProgress(count, nonDirFiles.length);
+    }
+
+    return results;
+  };
+
+  return { entries, extractFile, extractAllFiles };
 }

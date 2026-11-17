@@ -132,6 +132,16 @@ export default function ToolWorkbench({
 
   // ZIP State
   const [zipEntries, setZipEntries] = useState<ZipEntryItem[]>([]);
+  const [zipFilterQuery, setZipFilterQuery] = useState("");
+  const [extractingEntryName, setExtractingEntryName] = useState<string | null>(null);
+  const [extractedAllCount, setExtractedAllCount] = useState<number | null>(null);
+  const [previewZipEntry, setPreviewZipEntry] = useState<{
+    name: string;
+    content?: string;
+    url?: string;
+    isText?: boolean;
+    isImage?: boolean;
+  } | null>(null);
 
   // Security Tool State
   const [pwdLength, setPwdLength] = useState(16);
@@ -240,6 +250,80 @@ export default function ToolWorkbench({
         origin: { y: 0.6 },
       });
     } catch {}
+  };
+
+  const handleDownloadZipEntry = async (entryName: string) => {
+    if (!files[0]) return;
+    try {
+      setExtractingEntryName(entryName);
+      const { extractFile } = await readZipArchive(files[0]);
+      const blob = await extractFile(entryName);
+      const filename = entryName.split("/").pop() || entryName;
+      downloadBlob(blob, filename);
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || "Failed to extract file");
+    } finally {
+      setExtractingEntryName(null);
+    }
+  };
+
+  const handlePreviewZipEntry = async (entryName: string) => {
+    if (!files[0]) return;
+    try {
+      setExtractingEntryName(entryName);
+      const { extractFile } = await readZipArchive(files[0]);
+      const blob = await extractFile(entryName);
+      const lower = entryName.toLowerCase();
+      const isImg = /\.(png|jpg|jpeg|webp|gif|svg|bmp)$/.test(lower);
+      const isTxt = /\.(txt|md|json|js|ts|tsx|jsx|css|html|xml|bat|sh|yml|yaml|env|csv|log|py|c|cpp|h|java|sql)$/.test(lower);
+
+      if (isImg) {
+        const url = URL.createObjectURL(blob);
+        setPreviewZipEntry({ name: entryName, url, isImage: true });
+      } else if (isTxt) {
+        const text = await blob.text();
+        setPreviewZipEntry({ name: entryName, content: text, isText: true });
+      } else {
+        const filename = entryName.split("/").pop() || entryName;
+        downloadBlob(blob, filename);
+      }
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || "Failed to preview file");
+    } finally {
+      setExtractingEntryName(null);
+    }
+  };
+
+  const handleExtractAllZipFiles = async () => {
+    if (!files[0]) {
+      setErrorMsg("Please upload a ZIP file first");
+      return;
+    }
+    setProcessing(true);
+    setProgress(10);
+    setErrorMsg("");
+    try {
+      const { extractAllFiles } = await readZipArchive(files[0]);
+      const extracted = await extractAllFiles((cur, tot) => {
+        setProgress(Math.round((cur / tot) * 90));
+      });
+      setExtractedAllCount(extracted.length);
+
+      // Create a downloadable unpacked package zip with clean structure
+      const zipBlob = await createZipArchive(
+        extracted.map((e) => new File([e.blob], e.name)),
+        (p) => setProgress(90 + Math.round(p * 0.1))
+      );
+      setResultBlob(zipBlob);
+      setResultUrl(URL.createObjectURL(zipBlob));
+      setResultFileName(`Extracted-${files[0].name.replace(/\.[^/.]+$/, "")}.zip`);
+      setProgress(100);
+      triggerConfetti();
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || "Failed to extract archive");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   // Main Action Executor
@@ -411,6 +495,10 @@ export default function ToolWorkbench({
         setResultBlob(zipBlob);
         setResultUrl(URL.createObjectURL(zipBlob));
         setResultFileName("Archive-YourTools.zip");
+      } else if (tool.id === "zip-extractor") {
+        if (files.length === 0) throw new Error("Please select a ZIP file to extract");
+        await handleExtractAllZipFiles();
+        return;
       }
 
       // 5. DEVELOPER TOOLS
@@ -1229,22 +1317,157 @@ export default function ToolWorkbench({
 
           {/* ZIP Extractor Contents View */}
           {tool.id === "zip-extractor" && zipEntries.length > 0 && (
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-                ZIP Archive Contents ({zipEntries.length} items)
-              </h4>
-              <div className="max-h-48 overflow-y-auto divide-y divide-slate-200 dark:divide-slate-800 text-xs font-mono">
-                {zipEntries.map((entry, idx) => (
-                  <div key={idx} className="py-1.5 flex items-center justify-between">
-                    <span className="text-slate-800 dark:text-slate-200 truncate">
-                      {entry.dir ? "📁 " : "📄 "}
-                      {entry.name}
+            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+              {/* Header with Stats & Actions */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>📦 ZIP Archive Contents</span>
+                    <span className="text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-cyan-400 font-semibold px-2 py-0.5 rounded-full">
+                      {zipEntries.length} items
                     </span>
-                    <span className="text-slate-400">
-                      {(entry.size / 1024).toFixed(1)} KB
-                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Total files: {zipEntries.filter((e) => !e.dir).length} • Uncompressed:{" "}
+                    {(
+                      zipEntries.reduce((acc, e) => acc + e.size, 0) /
+                      (1024 * 1024)
+                    ).toFixed(2)}{" "}
+                    MB
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Extract & Download All Button */}
+                  <button
+                    onClick={handleExtractAllZipFiles}
+                    disabled={processing}
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition-all hover:scale-102 flex-shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download All Extracted Files</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter Search Input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={zipFilterQuery}
+                  onChange={(e) => setZipFilterQuery(e.target.value)}
+                  placeholder="Filter files by name or extension (e.g. .ts, .bat, tests)..."
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* File List */}
+              <div className="max-h-72 overflow-y-auto divide-y divide-slate-200 dark:divide-slate-800 text-xs font-mono bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 p-2">
+                {zipEntries
+                  .filter((entry) =>
+                    !zipFilterQuery.trim() ||
+                    entry.name.toLowerCase().includes(zipFilterQuery.toLowerCase().trim())
+                  )
+                  .map((entry, idx) => (
+                    <div
+                      key={idx}
+                      className="py-2 px-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-900/60 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-base flex-shrink-0">
+                          {entry.dir ? "📁" : "📄"}
+                        </span>
+                        <div className="min-w-0">
+                          <span
+                            className={`truncate block font-medium ${
+                              entry.dir
+                                ? "text-slate-500 dark:text-slate-400 italic"
+                                : "text-slate-900 dark:text-slate-100"
+                            }`}
+                            title={entry.name}
+                          >
+                            {entry.name}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-slate-400 text-[11px]">
+                          {entry.dir ? "Folder" : `${(entry.size / 1024).toFixed(1)} KB`}
+                        </span>
+
+                        {!entry.dir && (
+                          <div className="flex items-center gap-1.5">
+                            {/* Preview Button */}
+                            <button
+                              onClick={() => handlePreviewZipEntry(entry.name)}
+                              disabled={extractingEntryName === entry.name}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 font-sans text-[11px] font-semibold flex items-center gap-1 transition-all"
+                              title="Preview file content"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>View</span>
+                            </button>
+
+                            {/* Download Button */}
+                            <button
+                              onClick={() => handleDownloadZipEntry(entry.name)}
+                              disabled={extractingEntryName === entry.name}
+                              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-sans text-[11px] font-semibold flex items-center gap-1 transition-all shadow-sm"
+                              title="Download this file"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>
+                                {extractingEntryName === entry.name ? "..." : "Download"}
+                              </span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* ZIP File Preview Lightbox Modal */}
+          {previewZipEntry && (
+            <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden text-slate-900 dark:text-white shadow-2xl">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-bold font-mono truncate">
+                    📄 {previewZipEntry.name}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadZipEntry(previewZipEntry.name)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </button>
+                    <button
+                      onClick={() => setPreviewZipEntry(null)}
+                      className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                ))}
+                </div>
+                <div className="p-4 flex-1 overflow-auto max-h-[60vh]">
+                  {previewZipEntry.isImage && previewZipEntry.url && (
+                    <img
+                      src={previewZipEntry.url}
+                      alt={previewZipEntry.name}
+                      className="max-h-[50vh] mx-auto object-contain rounded-lg shadow-md"
+                    />
+                  )}
+                  {previewZipEntry.isText && (
+                    <pre className="text-xs font-mono p-3 bg-slate-50 dark:bg-slate-950 rounded-xl overflow-x-auto whitespace-pre-wrap border border-slate-200 dark:border-slate-800">
+                      {previewZipEntry.content}
+                    </pre>
+                  )}
+                </div>
               </div>
             </div>
           )}
