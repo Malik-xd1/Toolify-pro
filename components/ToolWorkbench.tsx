@@ -32,6 +32,8 @@ import BusinessWorkbench from "./workbench/BusinessWorkbench";
 import TextWritingWorkbench from "./workbench/TextWritingWorkbench";
 import DevSecurityWorkbench from "./workbench/DevSecurityWorkbench";
 import MediaFileWorkbench from "./workbench/MediaFileWorkbench";
+import ToolIcon from "./ToolIcon";
+import QrFileTransferWorkbench from "./workbench/QrFileTransferWorkbench";
 import {
   mergePDFs,
   splitPDF,
@@ -847,7 +849,10 @@ export default function ToolWorkbench({
     "metadata-cleaner",
   ].includes(tool.id);
 
+  const isQrTransferTool = tool.id === "qr-file-transfer";
+
   const isSpecializedModularTool =
+    isQrTransferTool ||
     isCalculatorTool ||
     isSeoTool ||
     isBusinessTool ||
@@ -864,12 +869,7 @@ export default function ToolWorkbench({
       {/* Header */}
       <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md font-bold text-sm"
-            style={{ backgroundColor: tool.color || "#3B82F6" }}
-          >
-            {tool.category.toUpperCase().slice(0, 3)}
-          </div>
+          <ToolIcon tool={tool} size="lg" />
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
@@ -897,7 +897,9 @@ export default function ToolWorkbench({
 
         {/* Workbench Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-          {isCalculatorTool ? (
+          {isQrTransferTool ? (
+            <QrFileTransferWorkbench />
+          ) : isCalculatorTool ? (
             <CalculatorWorkbench toolId={tool.id} />
           ) : isSeoTool ? (
             <SeoWorkbench toolId={tool.id} />

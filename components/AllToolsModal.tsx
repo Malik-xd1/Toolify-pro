@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X, Search, ArrowRight, Sparkles } from "lucide-react";
 import { TOOLS, CATEGORIES, ToolCategory } from "@/data/toolsData";
+import ToolIcon from "@/components/ToolIcon";
 
 interface AllToolsModalProps {
   isOpen: boolean;
@@ -116,12 +117,7 @@ export default function AllToolsModal({
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shadow-sm"
-                      style={{ backgroundColor: tool.color || "#3B82F6" }}
-                    >
-                      {tool.category.toUpperCase().slice(0, 3)}
-                    </div>
+                    <ToolIcon tool={tool} size="sm" />
                     {tool.popular && (
                       <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/40">
                         Popular

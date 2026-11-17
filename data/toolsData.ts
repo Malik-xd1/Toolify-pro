@@ -113,8 +113,8 @@ export const CATEGORIES: CategoryInfo[] = [
   },
   {
     id: "qr",
-    name: "QR & Barcode",
-    description: "Generate and scan QR codes, Wi-Fi, WhatsApp, Barcodes",
+    name: "QR & File Sharing",
+    description: "QR codes, barcodes and QR-based device-to-device file transfer",
     iconName: "QrCode",
     bgColor: "bg-cyan-500",
     accentColor: "text-cyan-500",
@@ -948,6 +948,16 @@ export const TOOLS: Tool[] = [
   // ----------------------------------------------------
   // 9. QR & BARCODE (89-95)
   // ----------------------------------------------------
+  {
+    id: "qr-file-transfer",
+    name: "QR File Transfer",
+    category: "qr",
+    description: "Send photos, videos, PDFs and documents to another device by scanning a QR code. Direct device-to-device transfer with expiring links and optional password.",
+    badge: "New",
+    popular: true,
+    searchKeywords: ["qr file transfer", "send files qr", "device to device transfer", "phone to pc transfer", "wifi file sharing", "temporary file sharing", "share files link"],
+    color: "#06B6D4",
+  },
   {
     id: "qr-code-generator",
     name: "QR Code Generator",
