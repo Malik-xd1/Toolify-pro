@@ -66,7 +66,9 @@ import {
   extractAudioFromVideo,
   trimAudio,
   captureVideoFrame,
+  compressVideo,
 } from "@/utils/audioVideoTools";
+import { formatBytes } from "@/utils/transfer/shared";
 import { createZipArchive, readZipArchive, ZipEntryItem } from "@/utils/zipTools";
 import {
   generateQRCodeDataUrl,
@@ -120,6 +122,14 @@ export default function ToolWorkbench({
   const [paletteColors, setPaletteColors] = useState<string[]>([]);
   const [imageBeforeSize, setImageBeforeSize] = useState(0);
   const [imageAfterSize, setImageAfterSize] = useState(0);
+  const [imgCompressFormat, setImgCompressFormat] = useState<"auto" | "webp" | "jpeg">("auto");
+
+  // Video Compression State
+  const [videoBeforeSize, setVideoBeforeSize] = useState(0);
+  const [videoAfterSize, setVideoAfterSize] = useState(0);
+  const [videoCompressQuality, setVideoCompressQuality] = useState<"low" | "medium" | "high">("medium");
+  const [videoCompressRes, setVideoCompressRes] = useState<"original" | "720p" | "480p" | "360p">("720p");
+  const [videoCompressSpeed, setVideoCompressSpeed] = useState<number>(2.0);
 
   // Text & Developer Tools State
   const [textInput, setTextInput] = useState("");
@@ -252,6 +262,16 @@ export default function ToolWorkbench({
       setResultUrl(null);
 
       // Auto-preview/process for some tools
+      if (selected[0]) {
+        if (tool.id === "image-compressor") {
+          setImageBeforeSize(selected[0].size);
+          setImageAfterSize(0);
+        } else if (tool.id === "video-compressor") {
+          setVideoBeforeSize(selected[0].size);
+          setVideoAfterSize(0);
+        }
+      }
+
       if (tool.id === "color-picker" && selected[0]) {
         extractColorPalette(selected[0]).then(setPaletteColors);
       } else if (tool.id === "zip-extractor" && selected[0]) {
@@ -532,12 +552,20 @@ export default function ToolWorkbench({
       // 2. IMAGE TOOLS
       else if (tool.id === "image-compressor") {
         if (files.length === 0) throw new Error("Please select an image");
-        const res = await compressImage(files[0], imageQuality / 100);
+        setProgress(25);
+        setImageBeforeSize(files[0].size);
+        const res = await compressImage(files[0], imageQuality / 100, 1920, imgCompressFormat);
+        setProgress(100);
         setImageBeforeSize(res.originalSize);
         setImageAfterSize(res.newSize);
         setResultBlob(res.blob);
         setResultUrl(res.url);
-        setResultFileName(`Compressed-${files[0].name}`);
+        const ext = res.blob.type.includes("webp")
+          ? "webp"
+          : res.blob.type.includes("png")
+          ? "png"
+          : "jpg";
+        setResultFileName(`Compressed-${files[0].name.replace(/\.[^/.]+$/, "")}.${ext}`);
       } else if (tool.id === "jpg-to-png") {
         if (files.length === 0) throw new Error("Please select an image");
         const blob = await convertImageFormat(files[0], "image/png");
@@ -591,12 +619,21 @@ export default function ToolWorkbench({
       // 3. VIDEO & AUDIO TOOLS
       else if (tool.id === "video-compressor") {
         if (files.length === 0) throw new Error("Please select a video file to compress");
-        setProgress(40);
-        const arrayBuf = await files[0].arrayBuffer();
-        const blob = new Blob([arrayBuf], { type: files[0].type || "video/mp4" });
-        setResultBlob(blob);
-        setResultUrl(URL.createObjectURL(blob));
-        setResultFileName(`Compressed-${files[0].name}`);
+        setProgress(5);
+        setVideoBeforeSize(files[0].size);
+        const res = await compressVideo(files[0], {
+          quality: videoCompressQuality,
+          resolution: videoCompressRes,
+          speed: videoCompressSpeed,
+          onProgress: (pct) => setProgress(pct),
+        });
+        setProgress(100);
+        setVideoBeforeSize(res.originalSize);
+        setVideoAfterSize(res.newSize);
+        setResultBlob(res.blob);
+        setResultUrl(res.url);
+        const ext = res.mimeType.includes("mp4") ? "mp4" : "webm";
+        setResultFileName(`Compressed-${files[0].name.replace(/\.[^/.]+$/, "")}.${ext}`);
       } else if (tool.id === "mute-video") {
         if (files.length === 0) throw new Error("Please select a video file");
         const arrayBuf = await files[0].arrayBuffer();
@@ -1102,15 +1139,17 @@ export default function ToolWorkbench({
 
           {/* Image Compressor Options */}
           {tool.id === "image-compressor" && (
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 dark:text-slate-300">
-                  Target Quality: {imageQuality}%
+                <span className="text-slate-800 dark:text-slate-200">
+                  Target Quality: <span className="text-blue-600 dark:text-cyan-400 font-extrabold">{imageQuality}%</span>
                 </span>
-                <span className="text-blue-600 dark:text-cyan-400 font-semibold">
-                  {imageQuality > 80 ? "High Quality" : imageQuality > 50 ? "Balanced" : "Maximum Savings"}
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-400 font-semibold">
+                  {imageQuality > 80 ? "High Quality (~25% smaller)" : imageQuality > 55 ? "Balanced (~50% smaller)" : "Maximum Savings (~75% smaller)"}
                 </span>
               </div>
+
+              {/* Slider */}
               <input
                 type="range"
                 min="10"
@@ -1119,14 +1158,188 @@ export default function ToolWorkbench({
                 onChange={(e) => setImageQuality(Number(e.target.value))}
                 className="w-full accent-blue-600 cursor-pointer"
               />
-              {imageBeforeSize > 0 && imageAfterSize > 0 && (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                  <span>
-                    {(imageBeforeSize / 1024).toFixed(1)} KB → {(imageAfterSize / 1024).toFixed(1)} KB
-                  </span>
-                  <span>
-                    Saved {Math.round(((imageBeforeSize - imageAfterSize) / imageBeforeSize) * 100)}%
-                  </span>
+
+              {/* Quick Presets */}
+              <div className="flex gap-2">
+                {[
+                  { label: "Max Compression", q: 40 },
+                  { label: "Balanced", q: 70 },
+                  { label: "High Quality", q: 85 },
+                ].map((preset) => (
+                  <button
+                    key={preset.q}
+                    type="button"
+                    onClick={() => setImageQuality(preset.q)}
+                    className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all ${
+                      imageQuality === preset.q
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Format selection */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Output Format</span>
+                <div className="flex gap-1.5 bg-white dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                  {(["auto", "webp", "jpeg"] as const).map((fmt) => (
+                    <button
+                      key={fmt}
+                      type="button"
+                      onClick={() => setImgCompressFormat(fmt)}
+                      className={`px-3 py-1 rounded-lg font-semibold uppercase text-[11px] transition-all ${
+                        imgCompressFormat === fmt
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      {fmt === "auto" ? "Auto" : fmt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Before & After Size Analysis */}
+              {(imageBeforeSize > 0 || (files[0] && files[0].size > 0)) && (
+                <div className="p-3.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-slate-500 dark:text-slate-400">File Size Analysis</span>
+                    {imageAfterSize > 0 && (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                        {Math.round(((imageBeforeSize - imageAfterSize) / imageBeforeSize) * 100)}% Reduced
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">Before:</span>
+                      <span className={imageAfterSize > 0 ? "line-through text-slate-400" : "text-slate-900 dark:text-white"}>
+                        {formatBytes(imageBeforeSize || files[0]?.size || 0)}
+                      </span>
+                    </div>
+                    {imageAfterSize > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">After:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                          {formatBytes(imageAfterSize)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-[11px] italic">Ready to compress</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Video Compressor Options */}
+          {tool.id === "video-compressor" && (
+            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-800 dark:text-slate-200">
+                  Compression Preset:
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-cyan-400 font-semibold">
+                  {videoCompressQuality === "low"
+                    ? "Max Compression (~70% smaller)"
+                    : videoCompressQuality === "medium"
+                    ? "Balanced (~50% smaller)"
+                    : "High Quality (~30% smaller)"}
+                </span>
+              </div>
+
+              {/* Quality Preset Buttons */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "low", label: "Max Compression", desc: "Smallest size" },
+                  { id: "medium", label: "Balanced", desc: "Recommended" },
+                  { id: "high", label: "High Quality", desc: "Minimal loss" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setVideoCompressQuality(item.id as "low" | "medium" | "high")}
+                    className={`p-2.5 rounded-2xl text-left border transition-all ${
+                      videoCompressQuality === item.id
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                        : "bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <div className="text-xs font-extrabold">{item.label}</div>
+                    <div className={`text-[10px] mt-0.5 ${videoCompressQuality === item.id ? "text-blue-100" : "text-slate-400"}`}>
+                      {item.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Target Resolution & Speed */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Target Resolution
+                  </label>
+                  <select
+                    value={videoCompressRes}
+                    onChange={(e) => setVideoCompressRes(e.target.value as "original" | "720p" | "480p" | "360p")}
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none"
+                  >
+                    <option value="original">Original Dimensions</option>
+                    <option value="720p">720p HD (Best balance)</option>
+                    <option value="480p">480p SD (Smaller)</option>
+                    <option value="360p">360p (Fast / Mobile)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Encoding Speed
+                  </label>
+                  <select
+                    value={videoCompressSpeed}
+                    onChange={(e) => setVideoCompressSpeed(Number(e.target.value))}
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none"
+                  >
+                    <option value={2.0}>2x Fast (Recommended)</option>
+                    <option value={3.0}>3x Ultra-Fast</option>
+                    <option value={1.0}>1x Normal (High precision)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Before & After Size Analysis */}
+              {(videoBeforeSize > 0 || (files[0] && files[0].size > 0)) && (
+                <div className="p-3.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-slate-500 dark:text-slate-400">File Size Analysis</span>
+                    {videoAfterSize > 0 && (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                        {Math.round(((videoBeforeSize - videoAfterSize) / videoBeforeSize) * 100)}% Reduced
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">Before:</span>
+                      <span className={videoAfterSize > 0 ? "line-through text-slate-400" : "text-slate-900 dark:text-white"}>
+                        {formatBytes(videoBeforeSize || files[0]?.size || 0)}
+                      </span>
+                    </div>
+                    {videoAfterSize > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">After:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                          {formatBytes(videoAfterSize)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-[11px] italic">Ready to compress</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1750,28 +1963,112 @@ export default function ToolWorkbench({
             </div>
           )}
 
-          {/* SECTION C: Result & Download Card */}
+          {/* SECTION C: Compression Statistics & Result Download Card */}
           {resultBlob && (
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center gap-3 min-w-0">
-                <CheckCircle2 className="w-8 h-8 text-white flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-sm font-bold truncate">
-                    Ready: {resultFileName}
+            <div className="space-y-3 animate-in slide-in-from-bottom duration-300">
+              {/* Dedicated Compression Comparison Card (Image or Video) */}
+              {((tool.id === "image-compressor" && imageBeforeSize > 0 && imageAfterSize > 0) ||
+                (tool.id === "video-compressor" && videoBeforeSize > 0 && videoAfterSize > 0)) && (() => {
+                const isImg = tool.id === "image-compressor";
+                const before = isImg ? imageBeforeSize : videoBeforeSize;
+                const after = isImg ? imageAfterSize : videoAfterSize;
+                const savedBytes = before - after;
+                const savedPct = Math.round((savedBytes / before) * 100);
+
+                return (
+                  <div className="p-5 rounded-3xl bg-emerald-50/80 dark:bg-emerald-950/40 border-2 border-emerald-400/50 dark:border-emerald-800 space-y-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                            {isImg ? "Image Compression Analysis" : "Video Compression Analysis"}
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {savedPct > 0
+                              ? `Reduced by ${savedPct}% · ${formatBytes(savedBytes)} freed up`
+                              : "Optimized file footprint"}
+                          </p>
+                        </div>
+                      </div>
+                      {savedPct > 0 && (
+                        <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-black rounded-full shadow-xs">
+                          -{savedPct}% SAVED
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 3 Metric Comparison Cards */}
+                    <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-xs">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Before Size</span>
+                        <span className="text-xs sm:text-base font-extrabold text-slate-500 dark:text-slate-400 line-through decoration-rose-500/70 mt-0.5 block truncate">
+                          {formatBytes(before)}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-emerald-400 dark:border-emerald-700 text-center shadow-xs">
+                        <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 block tracking-wider">After Size</span>
+                        <span className="text-xs sm:text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
+                          {formatBytes(after)}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-emerald-500/15 dark:bg-emerald-500/20 rounded-2xl border border-emerald-400/40 text-center shadow-xs">
+                        <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300 block tracking-wider">Total Saved</span>
+                        <span className="text-xs sm:text-base font-black text-emerald-700 dark:text-emerald-300 mt-0.5 block truncate">
+                          {savedBytes > 0 ? `-${formatBytes(savedBytes)}` : "0 B"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Visual Savings Bar */}
+                    {savedPct > 0 && (
+                      <div className="space-y-1 pt-0.5">
+                        <div className="flex justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                          <span>Compressed size is {100 - savedPct}% of original</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">{savedPct}% smaller</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                          <div
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(5, 100 - savedPct))}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs text-blue-100 mt-0.5">
-                    Operation finished successfully. Download below.
+                );
+              })()}
+
+              {/* Main Download Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <CheckCircle2 className="w-8 h-8 text-white flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold truncate">
+                      Ready: {resultFileName}
+                    </div>
+                    <div className="text-xs text-blue-100 mt-0.5">
+                      {tool.id === "image-compressor" && imageAfterSize > 0
+                        ? `Before: ${formatBytes(imageBeforeSize)} → After: ${formatBytes(imageAfterSize)}`
+                        : tool.id === "video-compressor" && videoAfterSize > 0
+                        ? `Before: ${formatBytes(videoBeforeSize)} → After: ${formatBytes(videoAfterSize)}`
+                        : "Operation finished successfully. Download below."}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={() => downloadBlob(resultBlob, resultFileName)}
-                className="bg-white hover:bg-slate-100 text-blue-700 font-extrabold text-xs px-6 py-3 rounded-full flex items-center gap-2 shadow-lg hover:scale-105 transition-all flex-shrink-0"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download File</span>
-              </button>
+                <button
+                  onClick={() => downloadBlob(resultBlob, resultFileName)}
+                  className="bg-white hover:bg-slate-100 text-blue-700 font-extrabold text-xs px-6 py-3 rounded-full flex items-center gap-2 shadow-lg hover:scale-105 transition-all flex-shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download ({formatBytes(resultBlob.size)})</span>
+                </button>
+              </div>
             </div>
           )}
             </>

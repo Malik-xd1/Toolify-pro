@@ -66,7 +66,10 @@ export interface SessionStatus {
   fileCount?: number;
 }
 
+export type CloudMode = "blob" | "disk" | "none";
+
 export interface JoinResponse {
+  cloudMode?: CloudMode;
   peerId: string;
   token: string;
   files: TransferFileMeta[];

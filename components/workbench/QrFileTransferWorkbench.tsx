@@ -31,6 +31,7 @@ import {
   PollResponse,
   SessionStatus,
   TransferFileMeta,
+  CloudMode,
   JoinResponse,
   BLOCKED_EXTENSIONS,
   fileExtension,
@@ -147,6 +148,8 @@ export default function QrFileTransferWorkbench() {
 // ---------------------------------------------------------------------------------------
 
 interface ActiveSession {
+  cloudMode: CloudMode;
+  cloudMax: number;
   id: string;
   token: string;
   expiresAt: number;
@@ -197,15 +200,19 @@ function SenderView() {
 
   const startCloudUpload = useCallback(async (s: ActiveSession, list: File[]) => {
     if (uploadingRef.current) return;
+    if (s.cloudMode === "none") {
+      setNotice("Cloud fallback isn't configured on this server, so files can only be sent directly.");
+      return;
+    }
     uploadingRef.current = true;
     for (let i = 0; i < list.length; i++) {
       const f = list[i];
-      if (f.size > DEFAULT_CLOUD_FILE_BYTES) {
-        setUploadErrors((e) => ({ ...e, [i]: `Too large for cloud fallback (max ${formatBytes(DEFAULT_CLOUD_FILE_BYTES)}).` }));
+      if (f.size > s.cloudMax) {
+        setUploadErrors((e) => ({ ...e, [i]: `Too large for cloud fallback (max ${formatBytes(s.cloudMax)}).` }));
         continue;
       }
       try {
-        await uploadToCloud(s.id, s.token, i, f, (b) => setUploaded(String(i), b));
+        await uploadToCloud(s.cloudMode, s.id, s.token, i, f, (b) => setUploaded(String(i), b));
         setUploaded(String(i), f.size);
       } catch (e) {
         setUploadErrors((er) => ({ ...er, [i]: (e as Error).message }));
@@ -230,7 +237,10 @@ function SenderView() {
       if (!res.ok) throw new Error(body.error || "Could not create the transfer.");
       const url = `${window.location.origin}/tools/qr-file-transfer?s=${encodeURIComponent(body.id)}`;
       const qr = await QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: "M" });
-      const s: ActiveSession = { id: body.id, token: body.senderToken, expiresAt: body.expiresAt, url, qr };
+      const s: ActiveSession = {
+        cloudMode: body.cloudMode ?? "none",
+        cloudMax: body.cloudMaxBytes ?? DEFAULT_CLOUD_FILE_BYTES,
+        id: body.id, token: body.senderToken, expiresAt: body.expiresAt, url, qr };
       setSession(s);
       setCloud(meta.map(() => false));
 
@@ -654,7 +664,7 @@ function ReceiverView({ sessionId }: { sessionId: string }) {
               ? "The sender cancelled this transfer."
               : st.status === "expired"
               ? "This transfer has expired and its files were deleted."
-              : "Transfer not found. The link may be wrong or expired."
+              : "Transfer not found. The link may be incomplete, already expired, or created on a different server. Ask the sender to generate a new QR code."
           );
           return setPhase("ended");
         }
@@ -689,7 +699,7 @@ function ReceiverView({ sessionId }: { sessionId: string }) {
     const have = r.getBlob(i);
     if (have) return have;
     if (direct || (!cloud[i] && conn !== "failed")) return r.download(i);
-    if (cloud[i]) return fetchCloudBlob(cloudFileUrl(sessionId, join!.token, i), (b) => setProgress(String(i), b));
+    if (cloud[i]) return fetchCloudBlob(cloudFileUrl(sessionId, join!.token, i) + "&inline=1", (b) => setProgress(String(i), b));
     throw new Error("Waiting for the sender to upload a cloud copy.");
   };
 
@@ -837,7 +847,9 @@ function ReceiverView({ sessionId }: { sessionId: string }) {
 
       {conn === "failed" && (
         <Banner kind="info">
-          {anyCloud ? (
+          {join?.cloudMode === "none" && !anyCloud ? (
+            "Your network blocked a direct connection, and cloud fallback isn't available on this site. Try another network (e.g. both devices on the same Wi-Fi)."
+          ) : anyCloud ? (
             "Your network blocked a direct connection. Files are being served from temporary cloud storage instead."
           ) : (
             <>

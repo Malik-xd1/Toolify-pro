@@ -21,8 +21,17 @@ export function loadImage(file: File | Blob): Promise<HTMLImageElement> {
 export async function compressImage(
   file: File,
   quality: number = 0.8,
-  maxWidth: number = 1920
-): Promise<{ blob: Blob; url: string; originalSize: number; newSize: number }> {
+  maxWidth: number = 1920,
+  format: "jpeg" | "webp" | "auto" = "auto"
+): Promise<{
+  blob: Blob;
+  url: string;
+  originalSize: number;
+  newSize: number;
+  reductionPercentage: number;
+  width: number;
+  height: number;
+}> {
   const img = await loadImage(file);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -36,14 +45,26 @@ export async function compressImage(
   canvas.width = width;
   canvas.height = height;
 
-  if (ctx) {
-    // Fill white background for transparent images converted to jpeg
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
+  let mime = file.type || "image/jpeg";
+  if (format === "jpeg") {
+    mime = "image/jpeg";
+  } else if (format === "webp") {
+    mime = "image/webp";
+  } else {
+    // auto: if png, default to webp for transparency + high compression
+    if (file.type === "image/png") {
+      mime = "image/webp";
+    }
   }
 
-  const mime = file.type === "image/png" ? "image/jpeg" : file.type;
+  if (ctx) {
+    if (mime === "image/jpeg") {
+      // Fill white background for transparent images converted to jpeg
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.drawImage(img, 0, 0, width, height);
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -52,11 +73,18 @@ export async function compressImage(
           reject(new Error("Compression failed"));
           return;
         }
+        const originalSize = file.size;
+        const newSize = blob.size;
+        const reductionPercentage = Math.round(((originalSize - newSize) / originalSize) * 100);
+
         resolve({
           blob,
           url: URL.createObjectURL(blob),
-          originalSize: file.size,
-          newSize: blob.size,
+          originalSize,
+          newSize,
+          reductionPercentage,
+          width,
+          height,
         });
       },
       mime,

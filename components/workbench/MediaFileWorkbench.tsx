@@ -19,6 +19,7 @@ import {
 } from "@/utils/audioVideoExtraTools";
 import { stripImageMetadata } from "@/utils/securityExtraTools";
 import { downloadBlob } from "@/utils/pdfTools";
+import { formatBytes } from "@/utils/transfer/shared";
 import { Upload, Download, Sparkles, CheckCircle2, FileText, Image as ImageIcon } from "lucide-react";
 
 interface MediaFileWorkbenchProps {
@@ -32,6 +33,8 @@ export default function MediaFileWorkbench({ toolId }: MediaFileWorkbenchProps) 
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultName, setResultName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [beforeSize, setBeforeSize] = useState(0);
+  const [afterSize, setAfterSize] = useState(0);
 
   // Options
   const [pageOrderStr, setPageOrderStr] = useState("3,1,2");
@@ -96,7 +99,9 @@ export default function MediaFileWorkbench({ toolId }: MediaFileWorkbenchProps) 
         setResultUrl(URL.createObjectURL(blob));
         setResultName("Merged-Audio-Stream.wav");
       } else if (toolId === "audio-compressor") {
+        setBeforeSize(files[0].size);
         const blob = await compressAudioFile(files[0]);
+        setAfterSize(blob.size);
         setResultBlob(blob);
         setResultUrl(URL.createObjectURL(blob));
         setResultName("Compressed-Audio.wav");
@@ -203,24 +208,41 @@ export default function MediaFileWorkbench({ toolId }: MediaFileWorkbenchProps) 
 
       {/* Download Result Card */}
       {resultBlob && (
-        <div className="p-6 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-900/60 rounded-3xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
-              <CheckCircle2 className="w-5 h-5" />
+        <div className="space-y-3">
+          {beforeSize > 0 && afterSize > 0 && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500">Before:</span>
+                <span className="line-through text-slate-400">{formatBytes(beforeSize)}</span>
+                <span className="text-slate-400">→</span>
+                <span className="text-slate-500">After:</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{formatBytes(afterSize)}</span>
+              </div>
+              <span className="px-2.5 py-1 bg-emerald-600 text-white rounded-full text-[11px]">
+                {Math.round(((beforeSize - afterSize) / beforeSize) * 100)}% Saved
+              </span>
             </div>
-            <div>
-              <span className="text-xs uppercase font-extrabold text-emerald-600 dark:text-emerald-400">Processing Completed</span>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-xs">{resultName}</h4>
-            </div>
-          </div>
+          )}
 
-          <button
-            onClick={() => downloadBlob(resultBlob, resultName)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-2.5 rounded-full flex items-center gap-1.5 shadow-md transition-all"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Result</span>
-          </button>
+          <div className="p-6 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-900/60 rounded-3xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs uppercase font-extrabold text-emerald-600 dark:text-emerald-400">Processing Completed</span>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-xs">{resultName}</h4>
+              </div>
+            </div>
+
+            <button
+              onClick={() => downloadBlob(resultBlob, resultName)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-2.5 rounded-full flex items-center gap-1.5 shadow-md transition-all"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download ({formatBytes(resultBlob.size)})</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

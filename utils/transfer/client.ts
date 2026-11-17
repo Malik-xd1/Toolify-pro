@@ -8,7 +8,8 @@
 // The receiver requests one file at a time, so binary chunks are unambiguous. After a
 // reconnection the receiver re-requests the current file from the byte offset it already has.
 
-import type { PollResponse, TransferFileMeta } from "./shared";
+import { upload as blobUpload } from "@vercel/blob/client";
+import type { CloudMode, PollResponse, TransferFileMeta } from "./shared";
 
 const CHUNK_SIZE = 64 * 1024;
 const HIGH_WATER = 8 * 1024 * 1024;
@@ -431,7 +432,34 @@ export class TransferReceiver {
 }
 
 /** Upload a file to temporary cloud storage with progress (sender, fallback path). */
-export function uploadToCloud(sessionId: string, token: string, index: number, file: File, onProgress: (bytes: number) => void) {
+export async function uploadToCloud(
+  mode: CloudMode,
+  sessionId: string,
+  token: string,
+  index: number,
+  file: File,
+  onProgress: (bytes: number) => void
+) {
+  if (mode === "none") throw new Error("Cloud fallback is not available on this server.");
+  if (mode === "disk") return uploadToDisk(sessionId, token, index, file, onProgress);
+  // Vercel Blob: browser uploads directly to storage with a short-lived token from our server.
+  const safe = file.name.replace(/[^A-Za-z0-9._-]/g, "_").slice(-80) || "file";
+  const blob = await blobUpload(`transfer/${sessionId}/${index}-${safe}`, file, {
+    access: "public",
+    handleUploadUrl: "/api/transfer/blob",
+    clientPayload: JSON.stringify({ s: sessionId, i: index, t: token }),
+    multipart: file.size > 20 * 1024 * 1024,
+    onUploadProgress: (e) => onProgress(e.loaded),
+  });
+  const res = await fetch("/api/transfer/blob", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "x-transfer-token": token },
+    body: JSON.stringify({ s: sessionId, i: index, url: blob.url }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Upload could not be verified.");
+}
+
+function uploadToDisk(sessionId: string, token: string, index: number, file: File, onProgress: (bytes: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", `/api/transfer/upload?s=${encodeURIComponent(sessionId)}&i=${index}`);

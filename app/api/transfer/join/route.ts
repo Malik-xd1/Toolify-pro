@@ -10,15 +10,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const id = typeof body.s === "string" ? body.s : null;
-  const s = getSession(id);
+  const s = await getSession(id);
   if (!s) {
-    const st = endedStatus(id);
+    const st = await endedStatus(id);
     const msg =
       st === "cancelled" ? "The sender cancelled this transfer." : st === "expired" ? "This transfer has expired." : "Transfer not found.";
     return NextResponse.json({ error: msg, status: st }, { status: 410 });
   }
-  const result = joinSession(s, typeof body.password === "string" ? body.password : undefined);
+  const result = await joinSession(s, typeof body.password === "string" ? body.password : undefined);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  postMessage(s, result.peerId, "sender", { type: "joined" });
+  await postMessage(s, result.peerId, "sender", { type: "joined" });
   return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
 }
