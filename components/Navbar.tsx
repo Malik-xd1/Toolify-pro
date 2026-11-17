@@ -20,11 +20,11 @@ import {
 import { ToolCategory } from "@/data/toolsData";
 
 interface NavbarProps {
-  onOpenTool: (toolId: string) => void;
-  onOpenCategory: (category: ToolCategory | "all") => void;
-  onOpenFileLocker: () => void;
-  onOpenAbout: () => void;
-  onOpenContact: () => void;
+  onOpenTool?: (toolId: string) => void;
+  onOpenCategory?: (category: ToolCategory | "all") => void;
+  onOpenFileLocker?: () => void;
+  onOpenAbout?: () => void;
+  onOpenContact?: () => void;
 }
 
 export default function Navbar({
@@ -37,6 +37,40 @@ export default function Navbar({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleOpenTool = (toolId: string) => {
+    if (onOpenTool) {
+      onOpenTool(toolId);
+    } else if (typeof window !== "undefined") {
+      window.location.href = `/tools/${toolId}`;
+    }
+  };
+
+  const handleOpenCategory = (category: ToolCategory | "all") => {
+    if (onOpenCategory) {
+      onOpenCategory(category);
+    } else if (typeof window !== "undefined") {
+      window.location.href = `/?category=${category}#explore-tools`;
+    }
+  };
+
+  const handleOpenFileLocker = () => {
+    if (onOpenFileLocker) {
+      onOpenFileLocker();
+    } else if (typeof window !== "undefined") {
+      window.location.href = "/?open=file-locker";
+    }
+  };
+
+  const handleNavigateHome = () => {
+    if (typeof window !== "undefined") {
+      if (window.location.pathname === "/") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        window.location.href = "/";
+      }
+    }
+  };
 
   useEffect(() => {
     if (
@@ -112,7 +146,7 @@ export default function Navbar({
 
         {/* 1. Logo Section */}
         <div
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={handleNavigateHome}
           className="flex items-center gap-2.5 cursor-pointer group select-none flex-shrink-0"
         >
           {/* Logo Badge with Cyan Glow Border */}
@@ -140,7 +174,7 @@ export default function Navbar({
           {/* Home Glowing Active Pill with Underline Indicator */}
           <div className="flex flex-col items-center justify-center relative flex-shrink-0">
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={handleNavigateHome}
               className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-4 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-[0_0_18px_rgba(37,99,235,0.8)] border border-blue-400/50 transition-all cursor-pointer"
             >
               <Home className="w-3.5 h-3.5" />
@@ -157,7 +191,7 @@ export default function Navbar({
             onMouseLeave={() => setActiveDropdown(null)}
           >
             <button
-              onClick={() => onOpenCategory("all")}
+              onClick={() => handleOpenCategory("all")}
               className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
               <LayoutGrid className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
@@ -170,12 +204,12 @@ export default function Navbar({
               <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl">
                 <button
                   onClick={() => {
-                    onOpenCategory("all");
+                    handleOpenCategory("all");
                     setActiveDropdown(null);
                   }}
                   className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-200 hover:text-white hover:bg-blue-600/30 rounded-xl transition-colors cursor-pointer"
                 >
-                  Browse 100+ Tools
+                  Browse 120+ Tools
                 </button>
               </div>
             )}
@@ -190,7 +224,11 @@ export default function Navbar({
             <button
               onClick={() => {
                 const el = document.getElementById("explore-tools");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                } else if (typeof window !== "undefined") {
+                  window.location.href = "/#explore-tools";
+                }
               }}
               className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
@@ -201,21 +239,31 @@ export default function Navbar({
               </div>
             </button>
             {activeDropdown === "categories" && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 w-52 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl">
-                {["pdf", "image", "video", "audio", "document", "zip", "qr", "developer", "security"].map(
-                  (c) => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        onOpenCategory(c as ToolCategory);
-                        setActiveDropdown(null);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg capitalize transition-colors cursor-pointer"
-                    >
-                      {c} Tools
-                    </button>
-                  )
-                )}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-52 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl max-h-80 overflow-y-auto">
+                {[
+                  "pdf",
+                  "image",
+                  "video",
+                  "audio",
+                  "document",
+                  "developer",
+                  "security",
+                  "calculators",
+                  "qr",
+                  "business",
+                  "seo",
+                ].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      handleOpenCategory(c as ToolCategory);
+                      setActiveDropdown(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg capitalize transition-colors cursor-pointer"
+                  >
+                    {c} Tools
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -227,7 +275,7 @@ export default function Navbar({
             onMouseLeave={() => setActiveDropdown(null)}
           >
             <button
-              onClick={() => onOpenCategory("pdf")}
+              onClick={() => handleOpenCategory("pdf")}
               className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
               <FileText className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
@@ -242,7 +290,7 @@ export default function Navbar({
                   <button
                     key={t.id}
                     onClick={() => {
-                      onOpenTool(t.id);
+                      handleOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
@@ -261,7 +309,7 @@ export default function Navbar({
             onMouseLeave={() => setActiveDropdown(null)}
           >
             <button
-              onClick={() => onOpenCategory("image")}
+              onClick={() => handleOpenCategory("image")}
               className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
               <ImageIcon className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
@@ -276,7 +324,7 @@ export default function Navbar({
                   <button
                     key={t.id}
                     onClick={() => {
-                      onOpenTool(t.id);
+                      handleOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
@@ -295,7 +343,7 @@ export default function Navbar({
             onMouseLeave={() => setActiveDropdown(null)}
           >
             <button
-              onClick={() => onOpenCategory("video")}
+              onClick={() => handleOpenCategory("video")}
               className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
               <Play className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all fill-current" />
@@ -310,7 +358,7 @@ export default function Navbar({
                   <button
                     key={t.id}
                     onClick={() => {
-                      onOpenTool(t.id);
+                      handleOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
@@ -329,7 +377,7 @@ export default function Navbar({
             onMouseLeave={() => setActiveDropdown(null)}
           >
             <button
-              onClick={() => onOpenCategory("audio")}
+              onClick={() => handleOpenCategory("audio")}
               className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
               <Headphones className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
@@ -344,7 +392,7 @@ export default function Navbar({
                   <button
                     key={t.id}
                     onClick={() => {
-                      onOpenTool(t.id);
+                      handleOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
                     className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
@@ -358,7 +406,7 @@ export default function Navbar({
 
           {/* File Locker (Cyan Glowing Outlined Pill) */}
           <button
-            onClick={onOpenFileLocker}
+            onClick={handleOpenFileLocker}
             className="border-2 border-cyan-400 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 hover:text-white px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold shadow-[0_0_16px_rgba(6,182,212,0.45),inset_0_0_8px_rgba(6,182,212,0.2)] hover:shadow-[0_0_22px_rgba(6,182,212,0.7)] transition-all flex-shrink-0 cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4 text-cyan-400" />
@@ -370,7 +418,13 @@ export default function Navbar({
 
           {/* About Us */}
           <button
-            onClick={onOpenAbout}
+            onClick={() => {
+              if (onOpenAbout) {
+                onOpenAbout();
+              } else if (typeof window !== "undefined") {
+                window.location.href = "/?open=about";
+              }
+            }}
             className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
           >
             About Us
@@ -378,7 +432,13 @@ export default function Navbar({
 
           {/* Contact */}
           <button
-            onClick={onOpenContact}
+            onClick={() => {
+              if (onOpenContact) {
+                onOpenContact();
+              } else if (typeof window !== "undefined") {
+                window.location.href = "/?open=contact";
+              }
+            }}
             className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
           >
             Contact
@@ -428,7 +488,7 @@ export default function Navbar({
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button
               onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                handleNavigateHome();
                 setMobileMenuOpen(false);
               }}
               className="bg-blue-600 text-white px-3 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold shadow-md shadow-blue-600/40"
@@ -438,7 +498,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => {
-                onOpenFileLocker();
+                handleOpenFileLocker();
                 setMobileMenuOpen(false);
               }}
               className="border border-cyan-400 bg-cyan-950/40 text-cyan-300 px-3 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold"
@@ -451,7 +511,7 @@ export default function Navbar({
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <button
               onClick={() => {
-                onOpenCategory("all");
+                handleOpenCategory("all");
                 setMobileMenuOpen(false);
               }}
               className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
@@ -461,7 +521,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => {
-                onOpenCategory("pdf");
+                handleOpenCategory("pdf");
                 setMobileMenuOpen(false);
               }}
               className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
@@ -471,7 +531,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => {
-                onOpenCategory("image");
+                handleOpenCategory("image");
                 setMobileMenuOpen(false);
               }}
               className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
@@ -481,7 +541,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => {
-                onOpenCategory("video");
+                handleOpenCategory("video");
                 setMobileMenuOpen(false);
               }}
               className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
@@ -491,7 +551,7 @@ export default function Navbar({
             </button>
             <button
               onClick={() => {
-                onOpenCategory("audio");
+                handleOpenCategory("audio");
                 setMobileMenuOpen(false);
               }}
               className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
@@ -502,7 +562,11 @@ export default function Navbar({
             <button
               onClick={() => {
                 const el = document.getElementById("explore-tools");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                } else if (typeof window !== "undefined") {
+                  window.location.href = "/#explore-tools";
+                }
                 setMobileMenuOpen(false);
               }}
               className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
@@ -515,7 +579,11 @@ export default function Navbar({
           <div className="flex items-center justify-around border-t border-slate-700/60 pt-3 mt-3 text-xs text-slate-300">
             <button
               onClick={() => {
-                onOpenAbout();
+                if (onOpenAbout) {
+                  onOpenAbout();
+                } else if (typeof window !== "undefined") {
+                  window.location.href = "/?open=about";
+                }
                 setMobileMenuOpen(false);
               }}
               className="hover:text-white"
@@ -524,7 +592,11 @@ export default function Navbar({
             </button>
             <button
               onClick={() => {
-                onOpenContact();
+                if (onOpenContact) {
+                  onOpenContact();
+                } else if (typeof window !== "undefined") {
+                  window.location.href = "/?open=contact";
+                }
                 setMobileMenuOpen(false);
               }}
               className="hover:text-white"

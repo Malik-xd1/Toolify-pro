@@ -5,10 +5,10 @@ import { Zap } from "lucide-react";
 import { ToolCategory } from "@/data/toolsData";
 
 interface FooterProps {
-  onOpenCategory: (category: ToolCategory | "all") => void;
-  onOpenFileLocker: () => void;
-  onOpenAbout: () => void;
-  onOpenContact: () => void;
+  onOpenCategory?: (category: ToolCategory | "all") => void;
+  onOpenFileLocker?: () => void;
+  onOpenAbout?: () => void;
+  onOpenContact?: () => void;
   onOpenLegal?: (docType: "privacy" | "terms" | "disclaimer") => void;
 }
 
@@ -19,6 +19,31 @@ export default function Footer({
   onOpenContact,
   onOpenLegal,
 }: FooterProps) {
+  const handleHomeClick = () => {
+    if (typeof window !== "undefined") {
+      if (window.location.pathname === "/") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        window.location.href = "/";
+      }
+    }
+  };
+
+  const handleCategoryClick = (cat: ToolCategory | "all") => {
+    if (onOpenCategory) {
+      onOpenCategory(cat);
+    } else if (typeof window !== "undefined") {
+      window.location.href = `/?category=${cat}#explore-tools`;
+    }
+  };
+
+  const handleLockerClick = () => {
+    if (onOpenFileLocker) {
+      onOpenFileLocker();
+    } else if (typeof window !== "undefined") {
+      window.location.href = "/?open=file-locker";
+    }
+  };
   return (
     <footer className="bg-[#050917] text-white border-t border-blue-950/60 pt-12 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,7 +51,7 @@ export default function Footer({
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8 pb-10 border-b border-slate-800/80">
           {/* Logo */}
           <div
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={handleHomeClick}
             className="flex items-center gap-3 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-cyan-400 p-[1px] shadow-lg shadow-blue-500/20">
@@ -47,59 +72,56 @@ export default function Footer({
           {/* Navigation Links */}
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs font-medium text-slate-300">
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={handleHomeClick}
               className="hover:text-cyan-400 transition-colors"
             >
               Home
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={() => onOpenCategory("all")}
+              onClick={() => handleCategoryClick("all")}
               className="hover:text-cyan-400 transition-colors"
             >
               All Tools
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={() => {
-                const el = document.getElementById("explore-tools");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
+              onClick={() => handleCategoryClick("all")}
               className="hover:text-cyan-400 transition-colors"
             >
               Categories
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={() => onOpenCategory("pdf")}
+              onClick={() => handleCategoryClick("pdf")}
               className="hover:text-cyan-400 transition-colors"
             >
               PDF Tools
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={() => onOpenCategory("image")}
+              onClick={() => handleCategoryClick("image")}
               className="hover:text-cyan-400 transition-colors"
             >
               Image Tools
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={() => onOpenCategory("video")}
+              onClick={() => handleCategoryClick("video")}
               className="hover:text-cyan-400 transition-colors"
             >
               Video Tools
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={() => onOpenCategory("audio")}
+              onClick={() => handleCategoryClick("audio")}
               className="hover:text-cyan-400 transition-colors"
             >
               Audio Tools
             </button>
             <span className="text-slate-600">|</span>
             <button
-              onClick={onOpenFileLocker}
+              onClick={handleLockerClick}
               className="hover:text-cyan-400 transition-colors"
             >
               File Locker

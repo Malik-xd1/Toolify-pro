@@ -15,6 +15,9 @@ import {
   Lock,
   LayoutGrid,
   ChevronRight,
+  Calculator,
+  Briefcase,
+  Globe,
 } from "lucide-react";
 import { CATEGORIES, ToolCategory } from "@/data/toolsData";
 
@@ -49,6 +52,12 @@ export default function CategoriesGrid({
         return <Code2 className="w-5 h-5 text-white" />;
       case "security":
         return <ShieldCheck className="w-5 h-5 text-white" />;
+      case "calculators":
+        return <Calculator className="w-5 h-5 text-white" />;
+      case "business":
+        return <Briefcase className="w-5 h-5 text-white" />;
+      case "seo":
+        return <Globe className="w-5 h-5 text-white" />;
       case "locker":
         return <Lock className="w-5 h-5 text-white" />;
       default:

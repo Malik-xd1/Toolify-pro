@@ -25,7 +25,13 @@ import {
   Sliders,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { TOOLS, Tool } from "@/data/toolsData";
+import { TOOLS, Tool, getToolById } from "@/data/toolsData";
+import CalculatorWorkbench from "./workbench/CalculatorWorkbench";
+import SeoWorkbench from "./workbench/SeoWorkbench";
+import BusinessWorkbench from "./workbench/BusinessWorkbench";
+import TextWritingWorkbench from "./workbench/TextWritingWorkbench";
+import DevSecurityWorkbench from "./workbench/DevSecurityWorkbench";
+import MediaFileWorkbench from "./workbench/MediaFileWorkbench";
 import {
   mergePDFs,
   splitPDF,
@@ -69,16 +75,18 @@ import {
 
 interface ToolWorkbenchProps {
   toolId: string;
-  onClose: () => void;
-  onSwitchTool: (newToolId: string) => void;
+  onClose?: () => void;
+  onSwitchTool?: (newToolId: string) => void;
+  isInline?: boolean;
 }
 
 export default function ToolWorkbench({
   toolId,
   onClose,
   onSwitchTool,
+  isInline = false,
 }: ToolWorkbenchProps) {
-  const tool = TOOLS.find((t) => t.id === toolId) || TOOLS[0];
+  const tool = getToolById(toolId) || TOOLS.find((t) => t.id === toolId) || TOOLS[0];
 
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -799,50 +807,117 @@ export default function ToolWorkbench({
   const charCount = textInput.length;
   const readingTime = Math.ceil(wordCount / 200);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#080e26] border border-slate-200 dark:border-blue-900/60 w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-white">
-        {/* Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md font-bold text-sm"
-              style={{ backgroundColor: tool.color || "#3B82F6" }}
-            >
-              {tool.category.toUpperCase().slice(0, 3)}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
-                  {tool.name}
-                </h2>
-                <span className="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-cyan-400 font-semibold px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                  {tool.category.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {tool.description}
-              </p>
-            </div>
-          </div>
+  const isCalculatorTool = tool.category === "calculators";
+  const isSeoTool = tool.category === "seo";
+  const isBusinessTool = tool.category === "business";
+  const isSpecialWritingTool =
+    tool.category === "document" &&
+    [
+      "remove-extra-spaces",
+      "find-and-replace",
+      "grammar-checker",
+      "spell-checker",
+      "plagiarism-checker",
+      "reading-time-calculator",
+      "text-to-slug-converter",
+    ].includes(tool.id);
+  const isSpecialDevSecTool = [
+    "html-formatter",
+    "html-minifier",
+    "css-formatter",
+    "css-minifier",
+    "javascript-formatter",
+    "regex-tester",
+    "secure-pin-generator",
+    "random-key-generator",
+    "whatsapp-qr-generator",
+    "barcode-generator",
+  ].includes(tool.id);
+  const isSpecialMediaTool = [
+    "pdf-to-excel",
+    "pdf-page-reorder",
+    "image-background-remover",
+    "image-background-changer",
+    "image-upscaler",
+    "passport-photo-maker",
+    "audio-merger",
+    "video-merger",
+    "audio-compressor",
+    "video-thumbnail-maker",
+    "metadata-cleaner",
+  ].includes(tool.id);
 
+  const isSpecializedModularTool =
+    isCalculatorTool ||
+    isSeoTool ||
+    isBusinessTool ||
+    isSpecialWritingTool ||
+    isSpecialDevSecTool ||
+    isSpecialMediaTool;
+
+  const content = (
+    <div
+      className={`bg-white dark:bg-[#080e26] border border-slate-200 dark:border-blue-900/60 w-full max-w-4xl ${
+        isInline ? "rounded-3xl shadow-xl my-4" : "max-h-[92vh] rounded-3xl shadow-2xl"
+      } flex flex-col overflow-hidden text-slate-900 dark:text-white`}
+    >
+      {/* Header */}
+      <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md font-bold text-sm"
+            style={{ backgroundColor: tool.color || "#3B82F6" }}
+          >
+            {tool.category.toUpperCase().slice(0, 3)}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
+                {tool.name}
+              </h2>
+              <span className="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-cyan-400 font-semibold px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                {tool.category.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tool.description}
+            </p>
+          </div>
+        </div>
+
+        {onClose && (
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Workbench Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-          {/* Error Message */}
-          {errorMsg && (
-            <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+          {isCalculatorTool ? (
+            <CalculatorWorkbench toolId={tool.id} />
+          ) : isSeoTool ? (
+            <SeoWorkbench toolId={tool.id} />
+          ) : isBusinessTool ? (
+            <BusinessWorkbench toolId={tool.id} />
+          ) : isSpecialWritingTool ? (
+            <TextWritingWorkbench toolId={tool.id} />
+          ) : isSpecialDevSecTool ? (
+            <DevSecurityWorkbench toolId={tool.id} />
+          ) : isSpecialMediaTool ? (
+            <MediaFileWorkbench toolId={tool.id} />
+          ) : (
+            <>
+              {/* Error Message */}
+              {errorMsg && (
+                <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
           {/* SECTION A: File Upload Dropzone (for file-based tools) */}
           {tool.category !== "developer" &&
@@ -1697,6 +1772,8 @@ export default function ToolWorkbench({
               </button>
             </div>
           )}
+            </>
+          )}
         </div>
 
         {/* Footer Execution Bar */}
@@ -1706,14 +1783,17 @@ export default function ToolWorkbench({
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-            >
-              Cancel
-            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              >
+                Cancel
+              </button>
+            )}
 
-            {tool.id !== "voice-recorder" &&
+            {!isSpecializedModularTool &&
+              tool.id !== "voice-recorder" &&
               tool.id !== "text-to-speech" &&
               tool.id !== "word-counter" &&
               tool.id !== "qr-code-generator" && (
@@ -1738,6 +1818,15 @@ export default function ToolWorkbench({
           </div>
         </div>
       </div>
+  );
+
+  if (isInline) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      {content}
     </div>
   );
 }
