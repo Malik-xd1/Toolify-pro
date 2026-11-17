@@ -5,14 +5,17 @@ import {
   Zap,
   Home,
   ChevronDown,
-  Lock,
+  ShieldCheck,
   Sun,
   Moon,
+  LayoutGrid,
+  Folder,
   FileText,
   Image as ImageIcon,
-  Video,
+  Play,
   Headphones,
-  Grid,
+  Menu,
+  X,
 } from "lucide-react";
 import { ToolCategory } from "@/data/toolsData";
 
@@ -33,9 +36,9 @@ export default function Navbar({
 }: NavbarProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Check initial dark mode preference
     if (
       localStorage.theme === "dark" ||
       (!("theme" in localStorage) &&
@@ -77,7 +80,6 @@ export default function Navbar({
     { id: "png-to-jpg", name: "PNG to JPG" },
     { id: "image-compressor", name: "Image Compressor" },
     { id: "image-resizer", name: "Image Resizer" },
-    { id: "image-cropper", name: "Image Cropper" },
     { id: "favicon-generator", name: "Favicon Generator" },
     { id: "color-picker", name: "Color Picker" },
   ];
@@ -87,7 +89,6 @@ export default function Navbar({
     { id: "mp4-to-mp3", name: "MP4 to MP3" },
     { id: "video-trimmer", name: "Video Trimmer" },
     { id: "video-frame-extractor", name: "Video Frame Extractor" },
-    { id: "video-speed", name: "Video Speed" },
     { id: "mute-video", name: "Mute Video" },
   ];
 
@@ -96,53 +97,91 @@ export default function Navbar({
     { id: "audio-converter", name: "Audio Converter" },
     { id: "voice-recorder", name: "Voice Recorder" },
     { id: "text-to-speech", name: "Text to Speech" },
-    { id: "audio-speed", name: "Audio Speed" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-[#070b19] border-b border-blue-950/60 shadow-lg shadow-black/20 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-        {/* Logo */}
+    <header className="sticky top-2 sm:top-3 z-50 w-full px-2 sm:px-4 md:px-6 pointer-events-none">
+      {/* Outer Floating Pill Capsule */}
+      <div className="max-w-[1400px] mx-auto pointer-events-auto bg-gradient-to-r from-[#050b1f] via-[#09153d] to-[#050b1f] rounded-full border border-blue-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.7),0_0_25px_rgba(37,99,235,0.25)] px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between text-white relative backdrop-blur-xl">
+        {/* Glowing Top-Left and Top-Right Edge Flares (Exact as in reference image) */}
+        <div className="absolute -top-[1px] left-10 sm:left-14 w-44 sm:w-56 h-[2.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[0.5px] pointer-events-none shadow-[0_0_12px_#22d3ee]" />
+        <div className="absolute -top-[1px] right-10 sm:right-14 w-44 sm:w-56 h-[2.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[0.5px] pointer-events-none shadow-[0_0_12px_#22d3ee]" />
+        {/* Bottom Subtle Flares */}
+        <div className="absolute -bottom-[1px] left-20 w-32 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent blur-[0.5px] pointer-events-none" />
+        <div className="absolute -bottom-[1px] right-20 w-32 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent blur-[0.5px] pointer-events-none" />
+
+        {/* 1. Logo Section */}
         <div
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="flex items-center gap-3 cursor-pointer group select-none"
+          className="flex items-center gap-2.5 cursor-pointer group select-none flex-shrink-0"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-cyan-400 p-[1px] shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all">
-            <div className="w-full h-full bg-[#070b19] rounded-[11px] flex items-center justify-center">
-              <Zap className="w-6 h-6 text-cyan-400 fill-cyan-400 transform -rotate-6 group-hover:scale-110 transition-transform" />
+          {/* Logo Badge with Cyan Glow Border */}
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-600 to-blue-800 p-[1.5px] shadow-[0_0_15px_rgba(6,182,212,0.5)] group-hover:shadow-[0_0_20px_rgba(6,182,212,0.8)] transition-all">
+            <div className="w-full h-full bg-[#070e28] rounded-[10px] flex items-center justify-center">
+              <Zap className="w-5 h-5 text-cyan-400 fill-cyan-400 transform -rotate-6 group-hover:scale-110 transition-transform" />
             </div>
           </div>
+
           <div className="flex flex-col">
-            <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-0.5">
+            <span className="text-base sm:text-lg font-black tracking-tight text-white flex items-center leading-none">
               Your<span className="text-cyan-400">Tools</span>
             </span>
-            <span className="text-[10px] text-slate-400 tracking-wider uppercase font-medium">
+            <span className="text-[9px] text-slate-400 tracking-wider font-medium mt-1">
               Every Tool. One Platform.
             </span>
           </div>
         </div>
 
-        {/* Navigation items */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-xs font-medium text-slate-300">
-          {/* Home Pill */}
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-full flex items-center gap-1.5 font-semibold shadow-md shadow-blue-500/20 transition-all"
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span>Home</span>
-          </button>
+        {/* Vertical Divider */}
+        <div className="hidden lg:block w-[1px] h-7 bg-slate-700/60 mx-1 xl:mx-2 flex-shrink-0" />
 
-          {/* All Tools */}
-          <button
-            onClick={() => onOpenCategory("all")}
-            className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1"
-          >
-            <span>All Tools</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
-          </button>
+        {/* 2. Navigation Items (Icon centered above text) */}
+        <nav className="hidden lg:flex items-center gap-1.5 xl:gap-2.5 flex-1 justify-center">
+          {/* Home Glowing Active Pill with Underline Indicator */}
+          <div className="flex flex-col items-center justify-center relative flex-shrink-0">
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-4 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-[0_0_18px_rgba(37,99,235,0.8)] border border-blue-400/50 transition-all cursor-pointer"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Home</span>
+            </button>
+            {/* Active Cyan Glow Notch Under Home */}
+            <div className="w-5 h-[2px] bg-cyan-400 rounded-full shadow-[0_0_8px_#22d3ee] mt-1 -mb-1" />
+          </div>
 
-          {/* Categories */}
+          {/* All Tools (Icon centered above text) */}
+          <div
+            className="relative"
+            onMouseEnter={() => setActiveDropdown("all-tools")}
+            onMouseLeave={() => setActiveDropdown(null)}
+          >
+            <button
+              onClick={() => onOpenCategory("all")}
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
+            >
+              <LayoutGrid className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
+              <div className="flex items-center gap-0.5 text-[11px] font-semibold tracking-tight">
+                <span>All Tools</span>
+                <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+              </div>
+            </button>
+            {activeDropdown === "all-tools" && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl">
+                <button
+                  onClick={() => {
+                    onOpenCategory("all");
+                    setActiveDropdown(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-200 hover:text-white hover:bg-blue-600/30 rounded-xl transition-colors cursor-pointer"
+                >
+                  Browse 100+ Tools
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Categories (Icon centered above text) */}
           <div
             className="relative"
             onMouseEnter={() => setActiveDropdown("categories")}
@@ -153,71 +192,35 @@ export default function Navbar({
                 const el = document.getElementById("explore-tools");
                 if (el) el.scrollIntoView({ behavior: "smooth" });
               }}
-              className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1"
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
-              <span>Categories</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <Folder className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
+              <div className="flex items-center gap-0.5 text-[11px] font-semibold tracking-tight">
+                <span>Categories</span>
+                <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+              </div>
             </button>
-
             {activeDropdown === "categories" && (
-              <div className="absolute top-full left-0 w-64 mt-1 bg-[#0a1026] border border-blue-900/40 rounded-xl shadow-2xl p-2 z-50 backdrop-blur-xl">
-                <div className="grid grid-cols-1 gap-1">
-                  <button
-                    onClick={() => {
-                      onOpenCategory("pdf");
-                      setActiveDropdown(null);
-                    }}
-                    className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-600/20 rounded-lg text-slate-200 hover:text-white transition-colors"
-                  >
-                    <FileText className="w-4 h-4 text-red-400" />
-                    <span>PDF Tools</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenCategory("image");
-                      setActiveDropdown(null);
-                    }}
-                    className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-600/20 rounded-lg text-slate-200 hover:text-white transition-colors"
-                  >
-                    <ImageIcon className="w-4 h-4 text-purple-400" />
-                    <span>Image Tools</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenCategory("video");
-                      setActiveDropdown(null);
-                    }}
-                    className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-600/20 rounded-lg text-slate-200 hover:text-white transition-colors"
-                  >
-                    <Video className="w-4 h-4 text-blue-400" />
-                    <span>Video Tools</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenCategory("audio");
-                      setActiveDropdown(null);
-                    }}
-                    className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-600/20 rounded-lg text-slate-200 hover:text-white transition-colors"
-                  >
-                    <Headphones className="w-4 h-4 text-orange-400" />
-                    <span>Audio Tools</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenCategory("all");
-                      setActiveDropdown(null);
-                    }}
-                    className="flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-600/20 rounded-lg text-slate-200 hover:text-white transition-colors"
-                  >
-                    <Grid className="w-4 h-4 text-emerald-400" />
-                    <span>View All Categories</span>
-                  </button>
-                </div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-52 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl">
+                {["pdf", "image", "video", "audio", "document", "zip", "qr", "developer", "security"].map(
+                  (c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        onOpenCategory(c as ToolCategory);
+                        setActiveDropdown(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg capitalize transition-colors cursor-pointer"
+                    >
+                      {c} Tools
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>
 
-          {/* PDF Tools Dropdown */}
+          {/* PDF Tools (Icon centered above text) */}
           <div
             className="relative"
             onMouseEnter={() => setActiveDropdown("pdf")}
@@ -225,13 +228,16 @@ export default function Navbar({
           >
             <button
               onClick={() => onOpenCategory("pdf")}
-              className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1"
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
-              <span>PDF Tools</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <FileText className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
+              <div className="flex items-center gap-0.5 text-[11px] font-semibold tracking-tight">
+                <span>PDF Tools</span>
+                <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+              </div>
             </button>
             {activeDropdown === "pdf" && (
-              <div className="absolute top-full left-0 w-52 mt-1 bg-[#0a1026] border border-blue-900/40 rounded-xl shadow-2xl p-2 z-50">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50">
                 {pdfQuickTools.map((t) => (
                   <button
                     key={t.id}
@@ -239,16 +245,16 @@ export default function Navbar({
                       onOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-slate-300 hover:text-white hover:bg-blue-600/20 rounded-lg transition-colors flex items-center justify-between"
+                    className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
                   >
-                    <span>{t.name}</span>
+                    {t.name}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Image Tools Dropdown */}
+          {/* Image Tools (Icon centered above text) */}
           <div
             className="relative"
             onMouseEnter={() => setActiveDropdown("image")}
@@ -256,13 +262,16 @@ export default function Navbar({
           >
             <button
               onClick={() => onOpenCategory("image")}
-              className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1"
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
-              <span>Image Tools</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <ImageIcon className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
+              <div className="flex items-center gap-0.5 text-[11px] font-semibold tracking-tight">
+                <span>Image Tools</span>
+                <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+              </div>
             </button>
             {activeDropdown === "image" && (
-              <div className="absolute top-full left-0 w-52 mt-1 bg-[#0a1026] border border-blue-900/40 rounded-xl shadow-2xl p-2 z-50">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50">
                 {imageQuickTools.map((t) => (
                   <button
                     key={t.id}
@@ -270,16 +279,16 @@ export default function Navbar({
                       onOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-slate-300 hover:text-white hover:bg-blue-600/20 rounded-lg transition-colors flex items-center justify-between"
+                    className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
                   >
-                    <span>{t.name}</span>
+                    {t.name}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Video Tools Dropdown */}
+          {/* Video Tools (Icon centered above text) */}
           <div
             className="relative"
             onMouseEnter={() => setActiveDropdown("video")}
@@ -287,13 +296,16 @@ export default function Navbar({
           >
             <button
               onClick={() => onOpenCategory("video")}
-              className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1"
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
-              <span>Video Tools</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <Play className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all fill-current" />
+              <div className="flex items-center gap-0.5 text-[11px] font-semibold tracking-tight">
+                <span>Video Tools</span>
+                <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+              </div>
             </button>
             {activeDropdown === "video" && (
-              <div className="absolute top-full left-0 w-52 mt-1 bg-[#0a1026] border border-blue-900/40 rounded-xl shadow-2xl p-2 z-50">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50">
                 {videoQuickTools.map((t) => (
                   <button
                     key={t.id}
@@ -301,16 +313,16 @@ export default function Navbar({
                       onOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-slate-300 hover:text-white hover:bg-blue-600/20 rounded-lg transition-colors flex items-center justify-between"
+                    className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
                   >
-                    <span>{t.name}</span>
+                    {t.name}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Audio Tools Dropdown */}
+          {/* Audio Tools (Icon centered above text) */}
           <div
             className="relative"
             onMouseEnter={() => setActiveDropdown("audio")}
@@ -318,13 +330,16 @@ export default function Navbar({
           >
             <button
               onClick={() => onOpenCategory("audio")}
-              className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1"
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-all group cursor-pointer"
             >
-              <span>Audio Tools</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <Headphones className="w-4 h-4 mb-0.5 text-slate-300 group-hover:text-cyan-400 group-hover:scale-105 transition-all" />
+              <div className="flex items-center gap-0.5 text-[11px] font-semibold tracking-tight">
+                <span>Audio Tools</span>
+                <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-white" />
+              </div>
             </button>
             {activeDropdown === "audio" && (
-              <div className="absolute top-full left-0 w-52 mt-1 bg-[#0a1026] border border-blue-900/40 rounded-xl shadow-2xl p-2 z-50">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 mt-2 bg-[#091233] border border-blue-800/60 rounded-2xl shadow-2xl p-2 z-50">
                 {audioQuickTools.map((t) => (
                   <button
                     key={t.id}
@@ -332,28 +347,31 @@ export default function Navbar({
                       onOpenTool(t.id);
                       setActiveDropdown(null);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-slate-300 hover:text-white hover:bg-blue-600/20 rounded-lg transition-colors flex items-center justify-between"
+                    className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-blue-600/30 rounded-lg transition-colors cursor-pointer"
                   >
-                    <span>{t.name}</span>
+                    {t.name}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* File Locker */}
+          {/* File Locker (Cyan Glowing Outlined Pill) */}
           <button
             onClick={onOpenFileLocker}
-            className="text-cyan-300 hover:text-white px-3 py-1.5 rounded-full bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-700/40 transition-all flex items-center gap-1.5 font-semibold"
+            className="border-2 border-cyan-400 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 hover:text-white px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold shadow-[0_0_16px_rgba(6,182,212,0.45),inset_0_0_8px_rgba(6,182,212,0.2)] hover:shadow-[0_0_22px_rgba(6,182,212,0.7)] transition-all flex-shrink-0 cursor-pointer"
           >
-            <Lock className="w-3.5 h-3.5 text-cyan-400" />
+            <ShieldCheck className="w-4 h-4 text-cyan-400" />
             <span>File Locker</span>
           </button>
+
+          {/* Divider */}
+          <div className="w-[1px] h-6 bg-slate-700/60 mx-1 flex-shrink-0" />
 
           {/* About Us */}
           <button
             onClick={onOpenAbout}
-            className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
           >
             About Us
           </button>
@@ -361,40 +379,161 @@ export default function Navbar({
           {/* Contact */}
           <button
             onClick={onOpenContact}
-            className="hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
           >
             Contact
           </button>
         </nav>
 
-        {/* Right side: Dark / Light toggle switch */}
-        <div className="flex items-center gap-3">
+        {/* 3. Right Section: Theme Toggle Switch */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div
             onClick={toggleTheme}
-            className="flex items-center bg-[#0d1633] border border-blue-900/40 rounded-full p-1 cursor-pointer select-none transition-all hover:border-blue-700"
+            className="relative w-14 h-7 bg-[#0a122e] border border-cyan-500/40 rounded-full p-0.5 cursor-pointer flex items-center justify-between select-none shadow-[0_0_10px_rgba(6,182,212,0.2)] hover:border-cyan-400 transition-all"
             title="Toggle Light / Dark Mode"
           >
-            <div
-              className={`p-1 rounded-full transition-all ${
-                !isDarkMode
-                  ? "bg-amber-400/20 text-amber-300 shadow-sm"
-                  : "text-slate-400"
-              }`}
-            >
+            {/* Sun Icon on the left */}
+            <div className="w-6 h-6 flex items-center justify-center text-amber-300 pl-0.5">
               <Sun className="w-3.5 h-3.5" />
             </div>
+
+            {/* Sliding Thumb */}
             <div
-              className={`p-1 rounded-full transition-all ${
-                isDarkMode
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500"
+              className={`absolute top-0.5 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/50 transition-all duration-300 ${
+                isDarkMode ? "right-0.5" : "left-0.5 bg-cyan-500"
               }`}
             >
-              <Moon className="w-3.5 h-3.5" />
+              {isDarkMode ? (
+                <Moon className="w-3 h-3 fill-white" />
+              ) : (
+                <Sun className="w-3 h-3 fill-white" />
+              )}
             </div>
           </div>
+
+          {/* Mobile Menu Hamburger (Visible on mobile/tablet) */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Open Navigation Menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden pointer-events-auto mt-2 max-w-[1400px] mx-auto bg-[#091233] border border-blue-800/60 rounded-3xl shadow-2xl p-4 backdrop-blur-2xl">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                setMobileMenuOpen(false);
+              }}
+              className="bg-blue-600 text-white px-3 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold shadow-md shadow-blue-600/40"
+            >
+              <Home className="w-4 h-4" />
+              <span>Home</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenFileLocker();
+                setMobileMenuOpen(false);
+              }}
+              className="border border-cyan-400 bg-cyan-950/40 text-cyan-300 px-3 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold"
+            >
+              <ShieldCheck className="w-4 h-4 text-cyan-400" />
+              <span>File Locker</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <button
+              onClick={() => {
+                onOpenCategory("all");
+                setMobileMenuOpen(false);
+              }}
+              className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
+            >
+              <LayoutGrid className="w-4 h-4 mb-1 text-cyan-400" />
+              <span>All Tools</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenCategory("pdf");
+                setMobileMenuOpen(false);
+              }}
+              className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
+            >
+              <FileText className="w-4 h-4 mb-1 text-red-400" />
+              <span>PDF Tools</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenCategory("image");
+                setMobileMenuOpen(false);
+              }}
+              className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
+            >
+              <ImageIcon className="w-4 h-4 mb-1 text-purple-400" />
+              <span>Image Tools</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenCategory("video");
+                setMobileMenuOpen(false);
+              }}
+              className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
+            >
+              <Play className="w-4 h-4 mb-1 text-blue-400 fill-current" />
+              <span>Video Tools</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenCategory("audio");
+                setMobileMenuOpen(false);
+              }}
+              className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
+            >
+              <Headphones className="w-4 h-4 mb-1 text-amber-400" />
+              <span>Audio Tools</span>
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("explore-tools");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+                setMobileMenuOpen(false);
+              }}
+              className="flex flex-col items-center p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200"
+            >
+              <Folder className="w-4 h-4 mb-1 text-emerald-400" />
+              <span>Categories</span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-around border-t border-slate-700/60 pt-3 mt-3 text-xs text-slate-300">
+            <button
+              onClick={() => {
+                onOpenAbout();
+                setMobileMenuOpen(false);
+              }}
+              className="hover:text-white"
+            >
+              About Us
+            </button>
+            <button
+              onClick={() => {
+                onOpenContact();
+                setMobileMenuOpen(false);
+              }}
+              className="hover:text-white"
+            >
+              Contact
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
