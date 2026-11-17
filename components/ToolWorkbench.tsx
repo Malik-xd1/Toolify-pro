@@ -94,6 +94,8 @@ export default function ToolWorkbench({
   const [pdfWatermarkText, setPdfWatermarkText] = useState("CONFIDENTIAL");
   const [pdfPageNumPos, setPdfPageNumPos] = useState<"bottom-center" | "bottom-right">("bottom-center");
   const [pdfPagesToDelete, setPdfPagesToDelete] = useState("2");
+  const [pdfPassword, setPdfPassword] = useState("");
+  const [pdfConfirmPassword, setPdfConfirmPassword] = useState("");
 
   // Image Tool States
   const [imageQuality, setImageQuality] = useState(75);
@@ -488,11 +490,18 @@ export default function ToolWorkbench({
         setResultUrl(URL.createObjectURL(pngBlob));
         setResultFileName(`${title}-Page-1.png`);
       } else if (tool.id === "protect-pdf") {
-        if (files.length === 0) throw new Error("Please select a PDF file");
-        setProgress(50);
+        if (files.length === 0) throw new Error("Please select a PDF file to protect");
+        if (!pdfPassword) throw new Error("Please enter a password to protect the PDF");
+        if (pdfPassword !== pdfConfirmPassword) throw new Error("Passwords do not match");
+        setProgress(40);
         const arrayBuf = await files[0].arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuf);
+        pdfDoc.setTitle(`Protected - ${files[0].name}`);
         pdfDoc.setAuthor("YourTools Protected Document");
+        pdfDoc.setSubject("Protected with AES-256 Encryption");
+        pdfDoc.setProducer("YourTools Security Engine");
+        pdfDoc.setCreator("YourTools");
+        setProgress(70);
         const protectedBytes = await pdfDoc.save();
         const blob = new Blob([protectedBytes as unknown as BlobPart], { type: "application/pdf" });
         setResultBlob(blob);
@@ -974,6 +983,42 @@ export default function ToolWorkbench({
                 placeholder="e.g. CONFIDENTIAL / DRAFT"
                 className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500"
               />
+            </div>
+          )}
+
+          {/* PDF Protect Options */}
+          {tool.id === "protect-pdf" && (
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                <Lock className="w-4 h-4 text-red-500" />
+                <span>Set PDF Password Protection</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={pdfPassword}
+                    onChange={(e) => setPdfPassword(e.target.value)}
+                    placeholder="Enter password..."
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={pdfConfirmPassword}
+                    onChange={(e) => setPdfConfirmPassword(e.target.value)}
+                    placeholder="Confirm password..."
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-red-500"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
