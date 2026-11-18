@@ -15,6 +15,7 @@ import FileLockerModal from "@/components/FileLockerModal";
 import AboutModal from "@/components/AboutModal";
 import ContactModal from "@/components/ContactModal";
 import LegalModal, { LegalDocType } from "@/components/LegalModal";
+import AdBanner from "@/components/ads/AdBanner";
 import { ToolCategory } from "@/data/toolsData";
 
 export default function Home() {
@@ -71,6 +72,11 @@ export default function Home() {
         onOpenAllTools={() => handleOpenCategory("all")}
         onOpenFileLocker={() => setIsFileLockerOpen(true)}
       />
+
+      {/* AdSense Policy-Compliant Banner */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <AdBanner slot="homepage-mid" />
+      </div>
 
       {/* 7. FAQ Section */}
       <FAQSection />

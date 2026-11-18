@@ -14,11 +14,18 @@ import {
   Lock,
   ChevronDown,
   ChevronUp,
+  FileCheck,
+  AlertCircle,
+  Cpu,
+  FileCode,
+  Users,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ToolWorkbench from "@/components/ToolWorkbench";
+import AdBanner from "@/components/ads/AdBanner";
 import { Tool, TOOLS, CATEGORIES, ToolCategory } from "@/data/toolsData";
+import { CATEGORY_DEFAULT_CONTENT } from "@/data/toolContentData";
 
 interface ToolPageClientProps {
   tool: Tool;
@@ -39,6 +46,11 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
   const relatedTools = TOOLS.filter(
     (t) => t.category === tool.category && t.id !== tool.id
   ).slice(0, 4);
+
+  // Retrieve rich educational content for this category
+  const detail =
+    CATEGORY_DEFAULT_CONTENT[tool.category] ||
+    CATEGORY_DEFAULT_CONTENT["pdf"];
 
   const getHowToSteps = () => {
     switch (tool.category) {
@@ -172,7 +184,7 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
     }
   };
 
-  const faqs = [
+  const combinedFaqs = [
     {
       q: `Is ${tool.name} completely free to use?`,
       a: "Yes! ToolifyPro provides full access to this tool with zero paywalls, no subscription requirements, and unlimited daily usage.",
@@ -181,14 +193,7 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
       q: "Are my sensitive files or personal inputs stored on your servers?",
       a: "No. ToolifyPro prioritizes user privacy. Tools run client-side using browser-native Web APIs, WebAssembly, and Canvas. Your data never leaves your browser unless an external public API lookup is explicitly requested.",
     },
-    {
-      q: "Does this tool work on mobile devices and tablets?",
-      a: "Yes, this tool is fully responsive and optimized for seamless use on smartphones, tablets, laptops, and desktop workstations.",
-    },
-    {
-      q: "Can I download or copy my results immediately?",
-      a: "Immediately upon processing completion, a prominent download or copy button appears so you can save your results without delay.",
-    },
+    ...detail.faqs,
   ];
 
   return (
@@ -211,13 +216,18 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
           </Link>
           <ChevronRight className="w-3 h-3 text-slate-400" />
           <Link
-            href="/#explore-tools"
+            href="/categories"
             className="hover:text-blue-600 dark:hover:text-cyan-400 transition-colors"
           >
             Categories
           </Link>
           <ChevronRight className="w-3 h-3 text-slate-400" />
-          <span className="capitalize">{categoryInfo.name}</span>
+          <Link
+            href={`/categories/${categoryInfo.id}`}
+            className="capitalize hover:text-blue-600 dark:hover:text-cyan-400 transition-colors"
+          >
+            {categoryInfo.name}
+          </Link>
           <ChevronRight className="w-3 h-3 text-slate-400" />
           <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
             {tool.name}
@@ -256,8 +266,61 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
           <ToolWorkbench toolId={tool.id} isInline={true} />
         </section>
 
+        {/* Top AdSense Compliant Banner (Isolated with clear margin) */}
+        <AdBanner slot="tool-page-mid" />
+
+        {/* Detailed What It Does & Technical Breakdown */}
+        <section className="mt-12 bg-white dark:bg-[#0a122e] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-blue-900/40 shadow-sm">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-3">
+            What is {tool.name} and How Does It Work?
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            {detail.whatItDoes}
+          </p>
+
+          {/* Who Benefits */}
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
+              <span>Who Can Benefit from {tool.name}?</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {detail.whoBenefits.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Practical Example & Output */}
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>Practical Example & Output</span>
+            </h3>
+            <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-xs space-y-2">
+              <div className="font-semibold text-slate-800 dark:text-slate-200">
+                <strong>Scenario: </strong> {detail.practicalExample.scenario}
+              </div>
+              <div className="text-slate-600 dark:text-slate-300">
+                <span className="font-semibold text-blue-600 dark:text-cyan-400">Input: </span>
+                {detail.practicalExample.input}
+              </div>
+              <div className="text-slate-600 dark:text-slate-300">
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Output: </span>
+                {detail.practicalExample.output}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* How to Use Section */}
-        <section className="mt-16 bg-white dark:bg-[#0a122e] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-blue-900/40 shadow-sm">
+        <section className="mt-12 bg-white dark:bg-[#0a122e] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-blue-900/40 shadow-sm">
           <div className="max-w-2xl">
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2.5">
               <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm font-bold shadow-md shadow-blue-500/30">
@@ -266,7 +329,7 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
               <span>How to Use {tool.name}</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Follow these simple steps to get results in seconds.
+              Follow these simple steps to complete your task in seconds.
             </p>
           </div>
 
@@ -292,46 +355,52 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
           </div>
         </section>
 
-        {/* Key Features & Benefits */}
-        <section className="mt-12 bg-gradient-to-br from-blue-900/10 via-transparent to-cyan-900/10 dark:bg-slate-900/40 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-blue-900/40">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-6">
-            Why Choose Our {tool.name}?
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-            <div className="flex items-start gap-3 p-4 bg-white dark:bg-[#070e28] rounded-2xl border border-slate-200 dark:border-slate-800">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-slate-900 dark:text-white font-bold mb-0.5">
-                  100% Free Forever
-                </strong>
-                <span className="text-slate-600 dark:text-slate-400">
-                  Unlimited tasks without subscription fees, usage limits, or locked premium tiers.
-                </span>
-              </div>
-            </div>
+        {/* Specifications & Constraints Grid */}
+        <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Supported Formats */}
+          <div className="bg-white dark:bg-[#0a122e] rounded-3xl p-6 border border-slate-200 dark:border-blue-900/40 shadow-sm">
+            <h3 className="font-bold text-base text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+              <FileCheck className="w-4 h-4 text-emerald-500" />
+              <span>Supported Formats & Inputs</span>
+            </h3>
+            <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+              {detail.supportedFormats.map((fmt, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <span>{fmt}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            <div className="flex items-start gap-3 p-4 bg-white dark:bg-[#070e28] rounded-2xl border border-slate-200 dark:border-slate-800">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-slate-900 dark:text-white font-bold mb-0.5">
-                  Private & Secure
-                </strong>
-                <span className="text-slate-600 dark:text-slate-400">
-                  Executed directly inside your browser sandbox. Your confidential files stay safe.
-                </span>
-              </div>
-            </div>
+          {/* Limitations */}
+          <div className="bg-white dark:bg-[#0a122e] rounded-3xl p-6 border border-slate-200 dark:border-blue-900/40 shadow-sm">
+            <h3 className="font-bold text-base text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <span>Technical Limitations</span>
+            </h3>
+            <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+              {detail.limitations.map((lim, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-1.5"></span>
+                  <span>{lim}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
-            <div className="flex items-start gap-3 p-4 bg-white dark:bg-[#070e28] rounded-2xl border border-slate-200 dark:border-slate-800">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-slate-900 dark:text-white font-bold mb-0.5">
-                  No Registration
-                </strong>
-                <span className="text-slate-600 dark:text-slate-400">
-                  Start using the tool immediately. No email verification or account creation required.
-                </span>
-              </div>
+        {/* Security & In-Browser Guarantee */}
+        <section className="mt-12 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-3xl p-6 sm:p-8 border border-emerald-200/80 dark:border-emerald-800/40">
+          <div className="flex items-start gap-3.5">
+            <Shield className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-bold text-base text-emerald-900 dark:text-emerald-300">
+                Privacy & Data Security Guarantee
+              </h3>
+              <p className="text-xs sm:text-sm text-emerald-800/90 dark:text-emerald-400/90 mt-1.5 leading-relaxed">
+                {detail.privacyGuarantee}
+              </p>
             </div>
           </div>
         </section>
@@ -346,7 +415,7 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
           </div>
 
           <div className="space-y-3">
-            {faqs.map((faq, idx) => (
+            {combinedFaqs.map((faq, idx) => (
               <div
                 key={idx}
                 className="bg-white dark:bg-[#0a122e] border border-slate-200 dark:border-blue-900/40 rounded-2xl overflow-hidden transition-all"
@@ -372,6 +441,9 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
           </div>
         </section>
 
+        {/* Bottom AdSense Compliant Banner */}
+        <AdBanner slot="tool-page-bottom" />
+
         {/* Related Tools in Same Category */}
         {relatedTools.length > 0 && (
           <section className="mt-16">
@@ -380,7 +452,7 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
                 More {categoryInfo.name}
               </h2>
               <Link
-                href="/#explore-tools"
+                href={`/categories/${categoryInfo.id}`}
                 className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
               >
                 <span>View all</span>

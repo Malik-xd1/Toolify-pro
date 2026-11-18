@@ -50,7 +50,11 @@ export default function Navbar({
     if (onOpenCategory) {
       onOpenCategory(category);
     } else if (typeof window !== "undefined") {
-      window.location.href = `/?category=${category}#explore-tools`;
+      if (category === "all") {
+        window.location.href = "/tools";
+      } else {
+        window.location.href = `/categories/${category}`;
+      }
     }
   };
 
@@ -425,13 +429,21 @@ export default function Navbar({
           {/* Divider */}
           <div className="w-[1px] h-6 bg-slate-700/60 mx-1 flex-shrink-0" />
 
+          {/* Guides / Blog */}
+          <a
+            href="/blog"
+            className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
+          >
+            Guides
+          </a>
+
           {/* About Us */}
           <button
             onClick={() => {
               if (onOpenAbout) {
                 onOpenAbout();
               } else if (typeof window !== "undefined") {
-                window.location.href = "/?open=about";
+                window.location.href = "/about";
               }
             }}
             className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
@@ -445,7 +457,7 @@ export default function Navbar({
               if (onOpenContact) {
                 onOpenContact();
               } else if (typeof window !== "undefined") {
-                window.location.href = "/?open=contact";
+                window.location.href = "/contact";
               }
             }}
             className="text-[11px] font-medium text-slate-300 hover:text-white px-2 py-1 transition-colors flex-shrink-0 cursor-pointer"
@@ -595,12 +607,19 @@ export default function Navbar({
           </div>
 
           <div className="flex items-center justify-around border-t border-slate-700/60 pt-3 mt-3 text-xs text-slate-300">
+            <a
+              href="/blog"
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-white"
+            >
+              Guides
+            </a>
             <button
               onClick={() => {
                 if (onOpenAbout) {
                   onOpenAbout();
                 } else if (typeof window !== "undefined") {
-                  window.location.href = "/?open=about";
+                  window.location.href = "/about";
                 }
                 setMobileMenuOpen(false);
               }}
@@ -613,7 +632,7 @@ export default function Navbar({
                 if (onOpenContact) {
                   onOpenContact();
                 } else if (typeof window !== "undefined") {
-                  window.location.href = "/?open=contact";
+                  window.location.href = "/contact";
                 }
                 setMobileMenuOpen(false);
               }}
