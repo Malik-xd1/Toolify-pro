@@ -797,6 +797,187 @@ export default function CalculatorWorkbench({ toolId }: CalculatorWorkbenchProps
           </div>
         </div>
       )}
+
+      {/* 14. SALARY CALCULATOR */}
+      {toolId === "salary-calculator" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Amount ($)</label>
+              <input
+                type="number"
+                value={salAmount}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setSalAmount(val);
+                  setSalResult(calculateSalary(val, salPeriod));
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-sm font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Pay Period</label>
+              <select
+                value={salPeriod}
+                onChange={(e) => {
+                  const period = e.target.value as "hourly" | "daily" | "weekly" | "monthly" | "annual";
+                  setSalPeriod(period);
+                  setSalResult(calculateSalary(salAmount, period));
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-sm font-semibold"
+              >
+                <option value="hourly">Hourly Rate</option>
+                <option value="daily">Daily Pay</option>
+                <option value="weekly">Weekly Salary</option>
+                <option value="monthly">Monthly Salary</option>
+                <option value="annual">Annual Salary</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-500 block">Hourly</span>
+              <span className="text-lg font-bold">${salResult.hourly}</span>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-500 block">Weekly</span>
+              <span className="text-lg font-bold">${salResult.weekly}</span>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-500 block">Bi-weekly</span>
+              <span className="text-lg font-bold">${salResult.biweekly}</span>
+            </div>
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-900/40">
+              <span className="text-xs text-blue-500 block font-semibold">Monthly</span>
+              <span className="text-xl font-black text-blue-600 dark:text-cyan-400">${salResult.monthly}</span>
+            </div>
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-900/40">
+              <span className="text-xs text-emerald-500 block font-semibold">Annual</span>
+              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">${salResult.annual}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 15. DATE DIFFERENCE CALCULATOR */}
+      {toolId === "date-difference-calculator" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={dateStart}
+                onChange={(e) => {
+                  setDateStart(e.target.value);
+                  setDateDiffResult(calculateDateDifference(e.target.value, dateEnd));
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-sm font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">End Date</label>
+              <input
+                type="date"
+                value={dateEnd}
+                onChange={(e) => {
+                  setDateEnd(e.target.value);
+                  setDateDiffResult(calculateDateDifference(dateStart, e.target.value));
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-sm font-semibold"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-900/40">
+              <span className="text-xs text-blue-500 block">Total Days</span>
+              <span className="text-2xl font-black text-blue-600 dark:text-cyan-400">{dateDiffResult.totalDays}</span>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-500 block">Weeks</span>
+              <span className="text-xl font-bold">{dateDiffResult.weeks}</span>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-500 block">Business Days</span>
+              <span className="text-xl font-bold">{dateDiffResult.businessDays}</span>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-500 block">Weekend Days</span>
+              <span className="text-xl font-bold">{dateDiffResult.weekendDays}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 16. GPA CALCULATOR */}
+      {toolId === "gpa-calculator" && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {gpaCourses.map((c, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={c.name}
+                  placeholder="Course name"
+                  onChange={(e) => {
+                    const updated = [...gpaCourses];
+                    updated[idx].name = e.target.value;
+                    setGpaCourses(updated);
+                    handleCalcGpa(updated);
+                  }}
+                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-sm font-semibold"
+                />
+                <select
+                  value={c.grade}
+                  onChange={(e) => {
+                    const updated = [...gpaCourses];
+                    updated[idx].grade = e.target.value;
+                    setGpaCourses(updated);
+                    handleCalcGpa(updated);
+                  }}
+                  className="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-sm font-semibold"
+                >
+                  {["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"].map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={c.credits}
+                  onChange={(e) => {
+                    const updated = [...gpaCourses];
+                    updated[idx].credits = parseInt(e.target.value) || 1;
+                    setGpaCourses(updated);
+                    handleCalcGpa(updated);
+                  }}
+                  className="w-20 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-sm font-semibold"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => {
+                const updated = [...gpaCourses, { name: `Course ${gpaCourses.length + 1}`, grade: "A", credits: 3 }];
+                setGpaCourses(updated);
+                handleCalcGpa(updated);
+              }}
+              className="text-xs text-blue-600 dark:text-cyan-400 font-bold hover:underline"
+            >
+              + Add Another Course
+            </button>
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-900/40 text-right">
+              <span className="text-xs text-emerald-500 font-semibold block">Cumulative GPA</span>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{gpaResult.gpa.toFixed(2)} / 4.0</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -37,6 +37,8 @@ export default function MediaFileWorkbench({ toolId }: MediaFileWorkbenchProps) 
   const [pageOrderStr, setPageOrderStr] = useState("3,1,2");
   const [bannerText, setBannerText] = useState("TOOLIFY PREVIEW");
   const [bgColorHex, setBgColorHex] = useState("#3B82F6");
+  const [signerName, setSignerName] = useState("Alex Johnson");
+  const [signPageNum, setSignPageNum] = useState(1);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -110,6 +112,31 @@ export default function MediaFileWorkbench({ toolId }: MediaFileWorkbenchProps) 
         setResultBlob(blob);
         setResultUrl(URL.createObjectURL(blob));
         setResultName("Scrubbed-Clean-Metadata.jpg");
+      } else if (toolId === "pdf-signer" || toolId === "sign-pdf") {
+        const sigCanvas = document.createElement("canvas");
+        sigCanvas.width = 400;
+        sigCanvas.height = 140;
+        const sCtx = sigCanvas.getContext("2d");
+        if (sCtx) {
+          sCtx.font = "italic bold 42px 'Brush Script MT', cursive, Georgia, serif";
+          sCtx.fillStyle = "#1e3a8a"; // authentic navy blue ink
+          sCtx.fillText(signerName || "Signature", 30, 80);
+          sCtx.strokeStyle = "#94a3b8";
+          sCtx.lineWidth = 1.5;
+          sCtx.beginPath();
+          sCtx.moveTo(20, 105);
+          sCtx.lineTo(380, 105);
+          sCtx.stroke();
+          sCtx.font = "10px sans-serif";
+          sCtx.fillStyle = "#64748b";
+          sCtx.fillText(`Digitally Verified via ToolifyPro - ${new Date().toISOString().slice(0, 10)}`, 20, 125);
+        }
+        const sigUrl = sigCanvas.toDataURL("image/png");
+        const bytes = await signPdfDocument(files[0], sigUrl, signPageNum);
+        const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+        setResultBlob(blob);
+        setResultUrl(URL.createObjectURL(blob));
+        setResultName(`Signed-${files[0].name}`);
       }
     } catch (err: unknown) {
       setErrorMsg((err as Error).message || "Operation failed");
@@ -183,6 +210,31 @@ export default function MediaFileWorkbench({ toolId }: MediaFileWorkbenchProps) 
             onChange={(e) => setBannerText(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
           />
+        </div>
+      )}
+
+      {(toolId === "pdf-signer" || toolId === "sign-pdf") && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Your Full Name (Printed Signature)</label>
+            <input
+              type="text"
+              value={signerName}
+              onChange={(e) => setSignerName(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              placeholder="e.g. John Doe"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Stamp on Page Number</label>
+            <input
+              type="number"
+              min={1}
+              value={signPageNum}
+              onChange={(e) => setSignPageNum(parseInt(e.target.value) || 1)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+            />
+          </div>
         </div>
       )}
 

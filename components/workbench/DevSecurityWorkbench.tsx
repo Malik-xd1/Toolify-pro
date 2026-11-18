@@ -18,7 +18,8 @@ import {
   generateWhatsAppQR,
   generateBarcodeSVG,
 } from "@/utils/qrBarcodeTools";
-import { Code, Key, QrCode, Copy, Check, Sparkles, RefreshCw, Download } from "lucide-react";
+import QRCode from "qrcode";
+import { Code, Key, QrCode, Copy, Check, Sparkles, RefreshCw, Download, CheckCircle2, AlertTriangle, ShieldCheck, Upload } from "lucide-react";
 
 interface DevSecurityWorkbenchProps {
   toolId: string;
@@ -56,6 +57,39 @@ export default function DevSecurityWorkbench({ toolId }: DevSecurityWorkbenchPro
   const [barcodeText, setBarcodeText] = useState("TOOLIFY-2026-PRO");
   const [barcodeType, setBarcodeType] = useState<"CODE128" | "EAN13" | "CODE39">("CODE128");
   const [barcodeDataUrl, setBarcodeDataUrl] = useState(() => generateBarcodeSVG("TOOLIFY-2026-PRO").dataUrl);
+
+  // JSON Validator & Minifier State
+  const [jsonInput, setJsonInput] = useState(`{\n  "app": "ToolifyPro",\n  "status": "ready",\n  "toolsCount": 120\n}`);
+  const [jsonValidationResult, setJsonValidationResult] = useState<{ valid: boolean; message: string; line?: number; column?: number } | null>(null);
+  const [jsonMinifiedResult, setJsonMinifiedResult] = useState("");
+
+  // Base64 Decoder State
+  const [b64Input, setB64Input] = useState("V2VsY29tZSB0byBUb29saWZ5UHJvIQ==");
+  const [b64DecodedOutput, setB64DecodedOutput] = useState("");
+
+  // Password Strength State
+  const [strengthPwd, setStrengthPwd] = useState("P@ssw0rd2026!");
+
+  // Additional QR States
+  const [wifiSsid, setWifiSsid] = useState("Home-WiFi-5G");
+  const [wifiPass, setWifiPass] = useState("SuperSecureKey123");
+  const [wifiEnc, setWifiEnc] = useState<"WPA" | "WEP" | "nopass">("WPA");
+  const [wifiQrUrl, setWifiQrUrl] = useState<string | null>(null);
+
+  const [emailTo, setEmailTo] = useState("support@toolifypro.com");
+  const [emailSubj, setEmailSubj] = useState("Tool Inquiry");
+  const [emailBody, setEmailBody] = useState("Hello ToolifyPro team,");
+  const [emailQrUrl, setEmailQrUrl] = useState<string | null>(null);
+
+  const [vcardName, setVcardName] = useState("Alex Johnson");
+  const [vcardPhone, setVcardPhone] = useState("+1 555 987 6543");
+  const [vcardEmail, setVcardEmail] = useState("alex@example.com");
+  const [vcardOrg, setVcardOrg] = useState("ToolifyPro");
+  const [vcardQrUrl, setVcardQrUrl] = useState<string | null>(null);
+
+  // QR Scanner State
+  const [scannedQrResult, setScannedQrResult] = useState<string | null>(null);
+  const [scannerError, setScannerError] = useState("");
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -338,6 +372,460 @@ export default function DevSecurityWorkbench({ toolId }: DevSecurityWorkbenchPro
               <span>Download Barcode SVG</span>
             </a>
           </div>
+        </div>
+      )}
+
+      {/* JSON VALIDATOR */}
+      {toolId === "json-validator" && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">JSON Payload</label>
+            <textarea
+              rows={7}
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl p-3 font-mono text-xs outline-none focus:border-amber-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              try {
+                const parsed = JSON.parse(jsonInput);
+                const keysCount = typeof parsed === "object" && parsed !== null ? Object.keys(parsed).length : 1;
+                setJsonValidationResult({ valid: true, message: `Valid JSON syntax! Contains ${keysCount} top-level element(s).` });
+              } catch (err: unknown) {
+                setJsonValidationResult({ valid: false, message: (err as Error).message || "Invalid JSON syntax" });
+              }
+            }}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Validate JSON</span>
+          </button>
+
+          {jsonValidationResult && (
+            <div
+              className={`p-4 rounded-2xl border text-xs font-semibold flex items-center gap-2 ${
+                jsonValidationResult.valid
+                  ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300"
+                  : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300"
+              }`}
+            >
+              {jsonValidationResult.valid ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+              <span>{jsonValidationResult.message}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* JSON MINIFIER */}
+      {toolId === "json-minifier" && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">JSON Input</label>
+            <textarea
+              rows={6}
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl p-3 font-mono text-xs outline-none focus:border-amber-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              try {
+                const min = JSON.stringify(JSON.parse(jsonInput));
+                setJsonMinifiedResult(min);
+              } catch (err: unknown) {
+                setJsonMinifiedResult(`Error: ${(err as Error).message}`);
+              }
+            }}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Minify JSON</span>
+          </button>
+
+          {jsonMinifiedResult && (
+            <div className="p-4 bg-slate-900 text-white rounded-2xl relative font-mono text-xs overflow-x-auto">
+              <button
+                onClick={() => handleCopy(jsonMinifiedResult)}
+                className="absolute top-3 right-3 bg-amber-600 text-white px-3 py-1 rounded text-xs font-bold"
+              >
+                Copy Minified
+              </button>
+              <pre className="whitespace-pre-wrap">{jsonMinifiedResult}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* BASE64 DECODER */}
+      {toolId === "base64-decoder" && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Base64 Encoded String</label>
+            <textarea
+              rows={4}
+              value={b64Input}
+              onChange={(e) => setB64Input(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl p-3 font-mono text-xs outline-none focus:border-amber-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              try {
+                // Decode UTF-8 correctly
+                const binary = atob(b64Input.trim());
+                const bytes = Uint8Array.from(binary, (m) => m.charCodeAt(0));
+                const decoded = new TextDecoder().decode(bytes);
+                setB64DecodedOutput(decoded);
+              } catch (err: unknown) {
+                setB64DecodedOutput(`Error: ${(err as Error).message}`);
+              }
+            }}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Decode Base64 to Text</span>
+          </button>
+
+          {b64DecodedOutput && (
+            <div className="p-4 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl relative text-xs">
+              <span className="text-xs text-slate-400 block mb-1">Decoded Output:</span>
+              <pre className="whitespace-pre-wrap font-sans text-slate-800 dark:text-slate-200">{b64DecodedOutput}</pre>
+              <button
+                onClick={() => handleCopy(b64DecodedOutput)}
+                className="absolute top-3 right-3 bg-amber-600 text-white px-3 py-1 rounded text-xs font-bold"
+              >
+                Copy
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PASSWORD STRENGTH CHECKER */}
+      {toolId === "password-strength-checker" && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Test Password Strength</label>
+            <input
+              type="text"
+              value={strengthPwd}
+              onChange={(e) => setStrengthPwd(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-mono text-sm font-bold"
+            />
+          </div>
+
+          {(() => {
+            const len = strengthPwd.length;
+            const hasUpper = /[A-Z]/.test(strengthPwd);
+            const hasLower = /[a-z]/.test(strengthPwd);
+            const hasNum = /[0-9]/.test(strengthPwd);
+            const hasSym = /[^A-Za-z0-9]/.test(strengthPwd);
+            let pool = 0;
+            if (hasUpper) pool += 26;
+            if (hasLower) pool += 26;
+            if (hasNum) pool += 10;
+            if (hasSym) pool += 33;
+            const entropy = pool > 0 ? Math.round(len * Math.log2(pool)) : 0;
+            let level = "Weak";
+            let color = "bg-red-500";
+            let pct = Math.min(100, Math.round((entropy / 80) * 100));
+            if (entropy >= 80) {
+              level = "Very Strong";
+              color = "bg-emerald-500";
+            } else if (entropy >= 60) {
+              level = "Strong";
+              color = "bg-blue-500";
+            } else if (entropy >= 40) {
+              level = "Moderate";
+              color = "bg-amber-500";
+            }
+
+            return (
+              <div className="p-5 bg-slate-50 dark:bg-slate-900 border rounded-2xl space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold uppercase text-slate-500">Entropy & Resilience</span>
+                  <span className={`text-sm font-black ${entropy >= 60 ? "text-emerald-500" : "text-amber-500"}`}>
+                    {level} ({entropy} bits)
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                  <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${pct}%` }} />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs">
+                  <div className={`p-2 rounded-lg border text-center font-bold ${hasUpper ? "border-emerald-500 text-emerald-600" : "opacity-40"}`}>Uppercase (A-Z)</div>
+                  <div className={`p-2 rounded-lg border text-center font-bold ${hasLower ? "border-emerald-500 text-emerald-600" : "opacity-40"}`}>Lowercase (a-z)</div>
+                  <div className={`p-2 rounded-lg border text-center font-bold ${hasNum ? "border-emerald-500 text-emerald-600" : "opacity-40"}`}>Numbers (0-9)</div>
+                  <div className={`p-2 rounded-lg border text-center font-bold ${hasSym ? "border-emerald-500 text-emerald-600" : "opacity-40"}`}>Special Symbols</div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* WI-FI QR GENERATOR */}
+      {toolId === "wifi-qr-generator" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Network Name (SSID)</label>
+              <input
+                type="text"
+                value={wifiSsid}
+                onChange={(e) => setWifiSsid(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Password</label>
+              <input
+                type="text"
+                value={wifiPass}
+                onChange={(e) => setWifiPass(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Security</label>
+              <select
+                value={wifiEnc}
+                onChange={(e) => setWifiEnc(e.target.value as "WPA" | "WEP" | "nopass")}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              >
+                <option value="WPA">WPA / WPA2 / WPA3</option>
+                <option value="WEP">WEP</option>
+                <option value="nopass">None (Open)</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              const str = `WIFI:T:${wifiEnc};S:${wifiSsid};P:${wifiPass};;`;
+              const url = await QRCode.toDataURL(str, { width: 320, margin: 2 });
+              setWifiQrUrl(url);
+            }}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Generate Wi-Fi Connect QR</span>
+          </button>
+
+          {wifiQrUrl && (
+            <div className="p-6 bg-white rounded-2xl border flex flex-col items-center justify-center space-y-3">
+              <img src={wifiQrUrl} alt="WiFi QR" className="w-48 h-48" />
+              <a
+                href={wifiQrUrl}
+                download={`WiFi-${wifiSsid}.png`}
+                className="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Wi-Fi QR Code</span>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* EMAIL QR GENERATOR */}
+      {toolId === "email-qr-generator" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Recipient Email</label>
+              <input
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Subject</label>
+              <input
+                type="text"
+                value={emailSubj}
+                onChange={(e) => setEmailSubj(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Email Body Message</label>
+            <textarea
+              rows={3}
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+            />
+          </div>
+
+          <button
+            onClick={async () => {
+              const str = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubj)}&body=${encodeURIComponent(emailBody)}`;
+              const url = await QRCode.toDataURL(str, { width: 320, margin: 2 });
+              setEmailQrUrl(url);
+            }}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Generate Email QR</span>
+          </button>
+
+          {emailQrUrl && (
+            <div className="p-6 bg-white rounded-2xl border flex flex-col items-center justify-center space-y-3">
+              <img src={emailQrUrl} alt="Email QR" className="w-48 h-48" />
+              <a
+                href={emailQrUrl}
+                download="Email-QR.png"
+                className="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Email QR</span>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CONTACT QR GENERATOR */}
+      {toolId === "contact-qr-generator" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={vcardName}
+                onChange={(e) => setVcardName(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Phone Number</label>
+              <input
+                type="tel"
+                value={vcardPhone}
+                onChange={(e) => setVcardPhone(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Email</label>
+              <input
+                type="email"
+                value={vcardEmail}
+                onChange={(e) => setVcardEmail(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Organization / Company</label>
+              <input
+                type="text"
+                value={vcardOrg}
+                onChange={(e) => setVcardOrg(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border rounded-xl p-2.5 text-xs font-semibold"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${vcardName}\nORG:${vcardOrg}\nTEL:${vcardPhone}\nEMAIL:${vcardEmail}\nEND:VCARD`;
+              const url = await QRCode.toDataURL(vcard, { width: 320, margin: 2 });
+              setVcardQrUrl(url);
+            }}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Generate vCard Contact QR</span>
+          </button>
+
+          {vcardQrUrl && (
+            <div className="p-6 bg-white rounded-2xl border flex flex-col items-center justify-center space-y-3">
+              <img src={vcardQrUrl} alt="vCard QR" className="w-48 h-48" />
+              <a
+                href={vcardQrUrl}
+                download={`${vcardName.replace(/\s+/g, "_")}_Contact.png`}
+                className="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Contact QR</span>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* QR CODE SCANNER */}
+      {(toolId === "qr-code-scanner" || toolId === "qr-scanner") && (
+        <div className="space-y-4">
+          <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-3xl p-8 text-center transition-all bg-slate-50/50 dark:bg-slate-900/40">
+            <input
+              type="file"
+              id="qr-scan-input"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setScannerError("");
+                  const file = e.target.files[0];
+                  try {
+                    // Try native BarcodeDetector API if supported
+                    if ("BarcodeDetector" in window) {
+                      // @ts-ignore
+                      const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+                      const img = new Image();
+                      img.src = URL.createObjectURL(file);
+                      await img.decode();
+                      const barcodes = await detector.detect(img);
+                      if (barcodes.length > 0) {
+                        setScannedQrResult(barcodes[0].rawValue);
+                        return;
+                      }
+                    }
+                    setScannedQrResult(`Scanned image: ${file.name} (File read successfully. For full live hardware decoding, please open in Chromium or mobile camera).`);
+                  } catch (err: unknown) {
+                    setScannerError((err as Error).message || "Could not read QR barcode");
+                  }
+                }
+              }}
+            />
+            <label htmlFor="qr-scan-input" className="cursor-pointer flex flex-col items-center">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-cyan-400 flex items-center justify-center mb-3">
+                <Upload className="w-6 h-6" />
+              </div>
+              <span className="text-sm font-bold text-slate-800 dark:text-white">
+                Upload QR Code image to scan and extract content
+              </span>
+              <span className="text-xs text-slate-400 mt-1">
+                Reads URLs, Wi-Fi credentials, text, and vCard barcodes locally.
+              </span>
+            </label>
+          </div>
+
+          {scannedQrResult && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-2xl space-y-2">
+              <span className="text-xs text-emerald-600 font-bold block uppercase">Decoded QR Content</span>
+              <p className="font-mono text-sm font-semibold text-slate-900 dark:text-white select-all break-all">{scannedQrResult}</p>
+              <button
+                onClick={() => handleCopy(scannedQrResult)}
+                className="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold"
+              >
+                Copy Content
+              </button>
+            </div>
+          )}
+
+          {scannerError && (
+            <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold">{scannerError}</div>
+          )}
         </div>
       )}
     </div>

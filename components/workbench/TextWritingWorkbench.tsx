@@ -30,6 +30,14 @@ export default function TextWritingWorkbench({ toolId }: TextWritingWorkbenchPro
   // Slug State
   const [slugSep, setSlugSep] = useState<"-" | "_">("-");
 
+  // Duplicate Lines State
+  const [dedupCaseSensitive, setDedupCaseSensitive] = useState(false);
+  const [dedupResult, setDedupResult] = useState<{ text: string; removed: number }>({ text: "", removed: 0 });
+
+  // Comparer State
+  const [diffTextA, setDiffTextA] = useState("ToolifyPro is a fast, free, client-side digital tools platform.");
+  const [diffTextB, setDiffTextB] = useState("ToolifyPro is a secure, 100% free, private digital tools platform.");
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -201,6 +209,187 @@ export default function TextWritingWorkbench({ toolId }: TextWritingWorkbenchPro
             >
               Copy Slug
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 7. CASE CONVERTER */}
+      {toolId === "case-converter" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "UPPERCASE", fn: () => setInputText(inputText.toUpperCase()) },
+              { label: "lowercase", fn: () => setInputText(inputText.toLowerCase()) },
+              {
+                label: "Title Case",
+                fn: () =>
+                  setInputText(
+                    inputText
+                      .toLowerCase()
+                      .split(" ")
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(" ")
+                  ),
+              },
+              {
+                label: "Sentence case",
+                fn: () =>
+                  setInputText(
+                    inputText
+                      .toLowerCase()
+                      .replace(/(^\s*\w|[.!?]\s*\w)/g, (c) => c.toUpperCase())
+                  ),
+              },
+              {
+                label: "camelCase",
+                fn: () =>
+                  setInputText(
+                    inputText
+                      .toLowerCase()
+                      .replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase())
+                  ),
+              },
+              {
+                label: "snake_case",
+                fn: () =>
+                  setInputText(
+                    inputText
+                      .toLowerCase()
+                      .replace(/\s+/g, "_")
+                      .replace(/[^a-z0-9_]/g, "")
+                  ),
+              },
+              {
+                label: "kebab-case",
+                fn: () =>
+                  setInputText(
+                    inputText
+                      .toLowerCase()
+                      .replace(/\s+/g, "-")
+                      .replace(/[^a-z0-9-]/g, "")
+                  ),
+              },
+              {
+                label: "CONSTANT_CASE",
+                fn: () =>
+                  setInputText(
+                    inputText
+                      .toUpperCase()
+                      .replace(/\s+/g, "_")
+                      .replace(/[^A-Z0-9_]/g, "")
+                  ),
+              },
+            ].map((btn) => (
+              <button
+                key={btn.label}
+                onClick={btn.fn}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-cyan-400 transition-colors"
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => handleCopy(inputText)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 shadow"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy Converted Text</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 8. REMOVE DUPLICATE LINES */}
+      {(toolId === "remove-duplicate-lines" || toolId === "remove-duplicates") && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dedupCaseSensitive}
+                onChange={(e) => setDedupCaseSensitive(e.target.checked)}
+                className="rounded"
+              />
+              <span>Case Sensitive Matching</span>
+            </label>
+            <button
+              onClick={() => {
+                const lines = inputText.split("\n");
+                const seen = new Set<string>();
+                const unique: string[] = [];
+                for (const l of lines) {
+                  const key = dedupCaseSensitive ? l.trim() : l.trim().toLowerCase();
+                  if (!seen.has(key) && l.trim().length > 0) {
+                    seen.add(key);
+                    unique.push(l.trim());
+                  }
+                }
+                const res = unique.join("\n");
+                setDedupResult({ text: res, removed: lines.length - unique.length });
+                setInputText(res);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Deduplicate Lines</span>
+            </button>
+          </div>
+
+          {dedupResult.removed > 0 && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Successfully removed {dedupResult.removed} duplicate line(s)!</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 9. TEXT COMPARER */}
+      {(toolId === "text-comparer" || toolId === "text-diff") && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Original Text (A)</label>
+              <textarea
+                rows={5}
+                value={diffTextA}
+                onChange={(e) => setDiffTextA(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Modified Text (B)</label>
+              <textarea
+                rows={5}
+                value={diffTextB}
+                onChange={(e) => setDiffTextB(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+            <span className="text-xs uppercase font-extrabold text-slate-500 block">Diff Analysis & Token Changes</span>
+            <div className="text-xs font-mono leading-relaxed p-3 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-x-1.5 flex flex-wrap">
+              {diffTextB.split(/\s+/).map((word, i) => {
+                const wordsA = diffTextA.split(/\s+/);
+                const isNew = !wordsA.includes(word);
+                return (
+                  <span
+                    key={i}
+                    className={
+                      isNew
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded"
+                        : "text-slate-800 dark:text-slate-200"
+                    }
+                  >
+                    {word}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

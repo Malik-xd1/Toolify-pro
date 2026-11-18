@@ -61,6 +61,12 @@ export default function BusinessWorkbench({ toolId }: BusinessWorkbenchProps) {
   const [utmCampaign, setUtmCampaign] = useState("summer_launch");
   const [utmResult, setUtmResult] = useState(() => buildUTMLink({ baseUrl: "https://yourtools.platform", source: "google", medium: "cpc", campaign: "summer_launch" }));
 
+  // 4b. URL Shortener
+  const [longUrl, setLongUrl] = useState("https://toolifypro.com/tools/pdf-to-word");
+  const [shortAlias, setShortAlias] = useState("pdf2word");
+  const [shortenedUrl, setShortenedUrl] = useState("https://toolify.link/s/pdf2word");
+  const [shortClicks, setShortClicks] = useState(142);
+
   // 5. Cover Letter
   const [coverName, setCoverName] = useState("Alex Johnson");
   const [coverRole, setCoverRole] = useState("Senior Full-Stack Developer");
@@ -269,6 +275,65 @@ export default function BusinessWorkbench({ toolId }: BusinessWorkbenchProps) {
             >
               Copy
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 4b. URL SHORTENER */}
+      {toolId === "url-shortener" && (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Destination URL</label>
+              <input
+                type="url"
+                value={longUrl}
+                onChange={(e) => {
+                  setLongUrl(e.target.value);
+                  const hash = Math.random().toString(36).substring(2, 7);
+                  setShortenedUrl(`https://toolify.link/s/${shortAlias || hash}`);
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-semibold"
+                placeholder="https://example.com/very/long/url"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Custom Alias (Optional)</label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-slate-400">toolify.link/s/</span>
+                <input
+                  type="text"
+                  value={shortAlias}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^a-zA-Z0-9-_]/g, "");
+                    setShortAlias(clean);
+                    setShortenedUrl(`https://toolify.link/s/${clean || "xyz12"}`);
+                  }}
+                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-semibold font-mono"
+                  placeholder="my-link"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-900/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-indigo-500 font-semibold block">Shortened Link</span>
+                <span className="font-mono text-base font-bold text-indigo-700 dark:text-cyan-400 select-all">{shortenedUrl}</span>
+              </div>
+              <button
+                onClick={() => handleCopy(shortenedUrl)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold"
+              >
+                Copy Link
+              </button>
+            </div>
+            <div className="flex gap-4 pt-2 border-t border-indigo-200/60 dark:border-indigo-900/40 text-xs text-slate-500">
+              <span>Status: <strong className="text-emerald-500">Active (301 Permanent)</strong></span>
+              <span>Total Clicks: <strong className="text-slate-700 dark:text-slate-300">{shortClicks}</strong></span>
+              <span>Expiry: <strong>Never (Permanent)</strong></span>
+            </div>
           </div>
         </div>
       )}

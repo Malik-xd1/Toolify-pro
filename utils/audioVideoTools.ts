@@ -118,3 +118,378 @@ export function captureVideoFrame(
     }, format);
   });
 }
+
+import { encodeGifAnimation } from "./gifEncoder";
+
+/**
+ * Truly compresses video client-side by resizing frame resolution and re-encoding at lower bitrate
+ */
+export async function compressVideo(
+  file: File,
+  targetResolution: "720p" | "480p" | "360p" = "720p",
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+
+    video.onloadedmetadata = () => {
+      let targetW = video.videoWidth || 1280;
+      let targetH = video.videoHeight || 720;
+      const aspect = targetW / targetH;
+
+      if (targetResolution === "480p") {
+        targetH = 480;
+        targetW = Math.round(480 * aspect);
+      } else if (targetResolution === "360p") {
+        targetH = 360;
+        targetW = Math.round(360 * aspect);
+      } else if (targetH > 720) {
+        targetH = 720;
+        targetW = Math.round(720 * aspect);
+      }
+      targetW = targetW % 2 === 0 ? targetW : targetW - 1;
+      targetH = targetH % 2 === 0 ? targetH : targetH - 1;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return reject(new Error("Canvas context failed"));
+      }
+
+      const stream = canvas.captureStream(24);
+      let mimeType = "video/webm;codecs=vp8";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "video/webm";
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "video/mp4";
+      }
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: targetResolution === "360p" ? 500000 : 900000,
+      });
+
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        URL.revokeObjectURL(url);
+        const compressedBlob = new Blob(chunks, { type: mimeType });
+        resolve(compressedBlob);
+      };
+
+      let animId: number;
+      const drawFrame = () => {
+        if (video.paused || video.ended) return;
+        ctx.drawImage(video, 0, 0, targetW, targetH);
+        if (onProgress && video.duration > 0) {
+          onProgress(Math.min(95, Math.round((video.currentTime / video.duration) * 90)));
+        }
+        animId = requestAnimationFrame(drawFrame);
+      };
+
+      video.onended = () => {
+        cancelAnimationFrame(animId);
+        recorder.stop();
+      };
+
+      recorder.start(100);
+      video.play().then(() => {
+        drawFrame();
+      }).catch(reject);
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Unable to read video for compression"));
+    };
+  });
+}
+
+/**
+ * Truly mutes video by re-encoding canvas stream without audio tracks
+ */
+export async function muteVideo(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return reject(new Error("Canvas context failed"));
+      }
+
+      const stream = canvas.captureStream(30);
+      let mimeType = "video/webm;codecs=vp8";
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        URL.revokeObjectURL(url);
+        resolve(new Blob(chunks, { type: mimeType }));
+      };
+
+      let animId: number;
+      const render = () => {
+        if (video.paused || video.ended) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (onProgress && video.duration > 0) {
+          onProgress(Math.min(95, Math.round((video.currentTime / video.duration) * 90)));
+        }
+        animId = requestAnimationFrame(render);
+      };
+
+      video.onended = () => {
+        cancelAnimationFrame(animId);
+        recorder.stop();
+      };
+
+      recorder.start(100);
+      video.play().then(render).catch(reject);
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load video file"));
+    };
+  });
+}
+
+/**
+ * Changes video playback speed
+ */
+export async function changeVideoSpeed(
+  file: File,
+  speed: number = 1.5,
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+    video.playbackRate = speed;
+
+    video.onloadedmetadata = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return reject(new Error("Canvas context failed"));
+      }
+
+      const stream = canvas.captureStream(30);
+      let mimeType = "video/webm;codecs=vp8";
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        URL.revokeObjectURL(url);
+        resolve(new Blob(chunks, { type: mimeType }));
+      };
+
+      let animId: number;
+      const render = () => {
+        if (video.paused || video.ended) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (onProgress && video.duration > 0) {
+          onProgress(Math.min(95, Math.round((video.currentTime / video.duration) * 90)));
+        }
+        animId = requestAnimationFrame(render);
+      };
+
+      video.onended = () => {
+        cancelAnimationFrame(animId);
+        recorder.stop();
+      };
+
+      recorder.start(100);
+      video.play().then(render).catch(reject);
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to read video file"));
+    };
+  });
+}
+
+/**
+ * Trims video between startSec and endSec
+ */
+export async function trimVideo(
+  file: File,
+  startSec: number,
+  endSec: number,
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return reject(new Error("Canvas context failed"));
+      }
+
+      video.currentTime = Math.max(0, startSec);
+
+      video.onseeked = () => {
+        const stream = canvas.captureStream(30);
+        let mimeType = "video/webm;codecs=vp8";
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
+
+        const recorder = new MediaRecorder(stream, { mimeType });
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          URL.revokeObjectURL(url);
+          resolve(new Blob(chunks, { type: mimeType }));
+        };
+
+        const targetEnd = Math.min(video.duration, endSec > startSec ? endSec : startSec + 5);
+        let animId: number;
+
+        const render = () => {
+          if (video.currentTime >= targetEnd || video.ended) {
+            cancelAnimationFrame(animId);
+            video.pause();
+            recorder.stop();
+            return;
+          }
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          if (onProgress) {
+            const span = targetEnd - startSec;
+            onProgress(Math.min(95, Math.round(((video.currentTime - startSec) / span) * 90)));
+          }
+          animId = requestAnimationFrame(render);
+        };
+
+        recorder.start(100);
+        video.play().then(render).catch(reject);
+      };
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load video file for trimming"));
+    };
+  });
+}
+
+/**
+ * Converts video clip into an animated GIF89a file
+ */
+export async function convertVideoToGif(
+  file: File,
+  options: { maxFrames?: number; targetWidth?: number } = {},
+  onProgress?: (progress: number) => void
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      const maxFrames = options.maxFrames || 16;
+      const duration = Math.min(6, video.duration);
+      const targetWidth = options.targetWidth || 320;
+      const aspect = (video.videoHeight || 240) / (video.videoWidth || 320);
+      const targetHeight = Math.round(targetWidth * aspect);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return reject(new Error("Canvas context failed"));
+      }
+
+      const frameImages: ImageData[] = [];
+      const interval = duration / maxFrames;
+      let frameIndex = 0;
+
+      const captureNext = () => {
+        if (frameIndex >= maxFrames) {
+          URL.revokeObjectURL(url);
+          if (onProgress) onProgress(80);
+          try {
+            const gifBlob = encodeGifAnimation(frameImages, targetWidth, targetHeight, Math.round(interval * 1000));
+            if (onProgress) onProgress(100);
+            resolve(gifBlob);
+          } catch (e) {
+            reject(e);
+          }
+          return;
+        }
+
+        video.currentTime = frameIndex * interval;
+      };
+
+      video.onseeked = () => {
+        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+        const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+        frameImages.push(imgData);
+        frameIndex++;
+        if (onProgress) onProgress(Math.round((frameIndex / maxFrames) * 75));
+        captureNext();
+      };
+
+      captureNext();
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load video for GIF conversion"));
+    };
+  });
+}

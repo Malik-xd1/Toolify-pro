@@ -263,6 +263,89 @@ export async function removePagesPDF(file: File, pagesToRemove: number[]): Promi
   return await pdf.save();
 }
 
+/**
+ * Truly compresses PDF documents client-side using stream consolidation and image resampling
+ */
+export async function compressPDF(
+  file: File,
+  qualityPercent: number = 70,
+  onProgress?: (progress: number) => void
+): Promise<{ bytes: Uint8Array; originalSize: number; compressedSize: number }> {
+  const originalSize = file.size;
+  const arrayBuffer = await file.arrayBuffer();
+
+  if (onProgress) onProgress(20);
+
+  const pdfDoc = await cleanAndLoadPdf(arrayBuffer);
+  const totalPages = pdfDoc.getPageCount();
+
+  // High-compression via canvas page rendering for large files (> 1MB)
+  if (originalSize > 1024 * 1024 && typeof window !== "undefined") {
+    try {
+      const { renderPdfPageToCanvas } = await import("./docxTools");
+      const compressedDoc = await PDFDocument.create();
+
+      const scale = qualityPercent < 50 ? 1.0 : qualityPercent < 75 ? 1.25 : 1.5;
+      const jpegQuality = Math.max(0.4, Math.min(0.85, qualityPercent / 100));
+
+      for (let i = 1; i <= totalPages; i++) {
+        if (onProgress) onProgress(20 + Math.round((i / totalPages) * 60));
+        const canvas = await renderPdfPageToCanvas(arrayBuffer, i, scale);
+        const jpegDataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
+        const jpegBytes = await fetch(jpegDataUrl).then((r) => r.arrayBuffer());
+        const embedded = await compressedDoc.embedJpg(jpegBytes);
+        const page = compressedDoc.addPage([embedded.width, embedded.height]);
+        page.drawImage(embedded, {
+          x: 0,
+          y: 0,
+          width: embedded.width,
+          height: embedded.height,
+        });
+      }
+
+      if (onProgress) onProgress(90);
+      const compressedBytes = await compressedDoc.save({ useObjectStreams: true });
+      if (compressedBytes.length < originalSize) {
+        return { bytes: compressedBytes, originalSize, compressedSize: compressedBytes.length };
+      }
+    } catch (e) {
+      console.warn("Canvas compression fallback:", e);
+    }
+  }
+
+  if (onProgress) onProgress(80);
+  const optimizedBytes = await pdfDoc.save({ useObjectStreams: true });
+  return {
+    bytes: optimizedBytes,
+    originalSize,
+    compressedSize: optimizedBytes.length,
+  };
+}
+
+/**
+ * Truly encrypts PDF with AES-256 standard security handler password protection
+ */
+export async function protectPDF(
+  file: File,
+  password: string
+): Promise<Uint8Array> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfBytes = new Uint8Array(arrayBuffer);
+  const { encryptPDF } = await import("@pdfsmaller/pdf-encrypt");
+  return await encryptPDF(pdfBytes, password, { algorithm: "AES-256" });
+}
+
+/**
+ * Removes password protection from an unlocked PDF document
+ */
+export async function unlockPDF(
+  file: File
+): Promise<Uint8Array> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfDoc = await cleanAndLoadPdf(arrayBuffer);
+  return await pdfDoc.save({ useObjectStreams: true });
+}
+
 // Download helper for binary arrays
 export function downloadBlob(data: Uint8Array | Blob, filename: string, mimeType: string = "application/octet-stream") {
   const blob = data instanceof Blob ? data : new Blob([data as unknown as BlobPart], { type: mimeType });

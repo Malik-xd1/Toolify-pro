@@ -292,3 +292,36 @@ export async function extractColorPalette(file: File): Promise<string[]> {
 
   return sorted.slice(0, 6);
 }
+
+// Crop Image
+export async function cropImage(
+  file: File,
+  cropArea: { x: number; y: number; width: number; height: number },
+  mimeType: string = "image/png"
+): Promise<Blob> {
+  const img = await loadImage(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, cropArea.width);
+  canvas.height = Math.max(1, cropArea.height);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas context unavailable");
+
+  ctx.drawImage(
+    img,
+    cropArea.x,
+    cropArea.y,
+    cropArea.width,
+    cropArea.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Crop failed"));
+    }, mimeType);
+  });
+}
