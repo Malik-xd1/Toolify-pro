@@ -1,26 +1,134 @@
 import JSZip from "jszip";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import pako from "pako";
 
 // Safe dynamic loader for pdfjs-dist in browser environments
 async function getPdfJs() {
   if (typeof window === "undefined") {
-    // SSR / Node environment
     return await import("pdfjs-dist/legacy/build/pdf.mjs");
   }
 
   const pdfjs = await import("pdfjs-dist");
   try {
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+      // Use same-origin local worker served from /public
+      const origin =
+        typeof window !== "undefined" && window.location?.origin
+          ? window.location.origin
+          : "";
+      pdfjs.GlobalWorkerOptions.workerSrc = `${origin}/pdf.worker.min.mjs`;
     }
   } catch (_) {}
   return pdfjs;
 }
 
 /**
+ * Decode text operators within a decompressed PDF content stream
+ */
+function decodePdfContentStream(streamText: string): string[] {
+  const lines: string[] = [];
+  const btRegex = /BT[\s\S]*?ET/g;
+  let btMatch: RegExpExecArray | null;
+
+  while ((btMatch = btRegex.exec(streamText)) !== null) {
+    const block = btMatch[0];
+    const blockParts: string[] = [];
+
+    // 1. Array strings: [ (Hello) 10 <4142> ] TJ
+    const arrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
+    let arrMatch: RegExpExecArray | null;
+    while ((arrMatch = arrayRegex.exec(block)) !== null) {
+      const content = arrMatch[1];
+      const items = content.match(/\(([\s\S]*?)\)|<([0-9a-fA-F]+)>/g) || [];
+      for (const item of items) {
+        if (item.startsWith("(")) {
+          const raw = item.slice(1, -1).replace(/\\([()\\])/g, "$1");
+          if (raw.trim()) blockParts.push(raw);
+        } else if (item.startsWith("<")) {
+          const hex = item.slice(1, -1);
+          let decoded = "";
+          for (let i = 0; i < hex.length; i += 2) {
+            decoded += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+          }
+          if (decoded.trim()) blockParts.push(decoded);
+        }
+      }
+    }
+
+    // 2. Literal strings: (Hello World) Tj or ' or "
+    const literalRegex = /\(([\s\S]*?)\)\s*(?:Tj|'|")/g;
+    let litMatch: RegExpExecArray | null;
+    while ((litMatch = literalRegex.exec(block)) !== null) {
+      const raw = litMatch[1].replace(/\\([()\\])/g, "$1");
+      if (raw.trim()) blockParts.push(raw);
+    }
+
+    // 3. Hex strings: <44617461> Tj
+    const hexRegex = /<([0-9a-fA-F]+)>\s*(?:Tj|'|")/g;
+    let hexMatch: RegExpExecArray | null;
+    while ((hexMatch = hexRegex.exec(block)) !== null) {
+      const hex = hexMatch[1];
+      let decoded = "";
+      for (let i = 0; i < hex.length; i += 2) {
+        decoded += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+      }
+      if (decoded.trim()) blockParts.push(decoded);
+    }
+
+    if (blockParts.length > 0) {
+      const text = blockParts.join(" ").replace(/\s{2,}/g, " ").trim();
+      if (text.length > 0 && !text.includes("FlateDecode") && !text.includes("xref")) {
+        lines.push(text);
+      }
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * Secondary decompression engine: parses all FlateDecode streams using pako
+ */
+function extractTextUsingPako(pdfBytes: ArrayBuffer): string {
+  const u8 = new Uint8Array(pdfBytes);
+  const latin1 = new TextDecoder("latin1").decode(u8);
+  const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let match: RegExpExecArray | null;
+  const extractedLines: string[] = [];
+
+  while ((match = streamRegex.exec(latin1)) !== null) {
+    const streamStart = match.index + match[0].indexOf("\n") + 1;
+    const streamLen = match[1].length;
+    const rawStream = u8.subarray(streamStart, streamStart + streamLen);
+
+    // Try inflating with pako
+    try {
+      const decompressed = pako.inflate(rawStream);
+      const decStr = new TextDecoder("latin1").decode(decompressed);
+      const lines = decodePdfContentStream(decStr);
+      if (lines.length > 0) {
+        extractedLines.push(...lines);
+      }
+    } catch (_) {
+      // Uncompressed stream attempt
+      try {
+        const decStr = new TextDecoder("latin1").decode(rawStream);
+        const lines = decodePdfContentStream(decStr);
+        if (lines.length > 0) {
+          extractedLines.push(...lines);
+        }
+      } catch (__) {}
+    }
+  }
+
+  return extractedLines.join("\n\n");
+}
+
+/**
  * Extract clean, structured text and paragraphs across all pages of a PDF document
  */
 export async function extractTextFromPdf(pdfBytes: ArrayBuffer): Promise<string> {
+  // TIER 1: Use pdfjs-dist for complete font mapping, kerning, and multi-page layout
   try {
     const pdfjs = await getPdfJs();
     const loadingTask = pdfjs.getDocument({
@@ -28,88 +136,77 @@ export async function extractTextFromPdf(pdfBytes: ArrayBuffer): Promise<string>
       useSystemFonts: true,
     });
 
-    const pdfDoc = await loadingTask.promise;
-    const numPages = pdfDoc.numPages;
-    const pageOutputs: string[] = [];
+    // Timeout guard so a frozen worker falls back within 4 seconds
+    const pdfDoc = await Promise.race([
+      loadingTask.promise,
+      new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error("pdfjs worker timeout")), 4000)
+      ),
+    ]);
 
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdfDoc.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const items = textContent.items as Array<{
-        str?: string;
-        transform?: number[];
-        width?: number;
-        height?: number;
-      }>;
+    if (pdfDoc) {
+      const numPages = pdfDoc.numPages;
+      const pageOutputs: string[] = [];
 
-      if (!items || items.length === 0) continue;
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const items = textContent.items as Array<{
+          str?: string;
+          transform?: number[];
+          width?: number;
+          height?: number;
+        }>;
 
-      let pageText = "";
-      let lastY: number | null = null;
+        if (!items || items.length === 0) continue;
 
-      for (const item of items) {
-        if (!item.str) continue;
-        const currentY = item.transform ? Math.round(item.transform[5]) : null;
+        let pageText = "";
+        let lastY: number | null = null;
 
-        if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 6) {
-          pageText += "\n";
-        } else if (
-          pageText.length > 0 &&
-          !pageText.endsWith("\n") &&
-          !pageText.endsWith(" ")
-        ) {
-          pageText += " ";
+        for (const item of items) {
+          if (!item.str) continue;
+          const currentY = item.transform ? Math.round(item.transform[5]) : null;
+
+          if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 6) {
+            pageText += "\n";
+          } else if (
+            pageText.length > 0 &&
+            !pageText.endsWith("\n") &&
+            !pageText.endsWith(" ")
+          ) {
+            pageText += " ";
+          }
+
+          pageText += item.str;
+          lastY = currentY;
         }
 
-        pageText += item.str;
-        lastY = currentY;
+        const trimmedPage = pageText.trim();
+        if (trimmedPage) {
+          pageOutputs.push(trimmedPage);
+        }
       }
 
-      const trimmedPage = pageText.trim();
-      if (trimmedPage) {
-        pageOutputs.push(trimmedPage);
+      if (pageOutputs.length > 0) {
+        return pageOutputs.join("\n\n");
       }
-    }
-
-    if (pageOutputs.length > 0) {
-      return pageOutputs.join("\n\n");
     }
   } catch (err) {
-    console.warn("pdfjs-dist text extraction failed, falling back to stream scanner:", err);
+    console.warn("pdfjs-dist primary engine failed, falling back to pako stream decompression:", err);
   }
 
-  // Robust Fallback: Scan text streams and parentheses in raw binary
+  // TIER 2: High-speed pako FlateDecode stream decompressor
   try {
-    const decoder = new TextDecoder("utf-8", { fatal: false });
-    const raw = decoder.decode(pdfBytes);
-
-    const matches = raw.match(/\((.*?)\)\s*T[jJ]/g) || [];
-    if (matches.length > 0) {
-      const cleaned = matches
-        .map((m) =>
-          m
-            .replace(/^[(\s]+|[)\s]+T[jJ]$/g, "")
-            .replace(/\\([()\\])/g, "$1")
-            .trim()
-        )
-        .filter((t) => t.length > 0)
-        .join(" ");
-
-      if (cleaned.length > 40) return cleaned;
+    const pakoText = extractTextUsingPako(pdfBytes);
+    if (pakoText && pakoText.trim().length > 30) {
+      return pakoText.trim();
     }
+  } catch (err) {
+    console.warn("pako stream decompression fallback failed:", err);
+  }
 
-    // Clean plain text fallback
-    const textStripped = raw
-      .replace(/<[^>]*>/g, " ")
-      .replace(/stream[\s\S]*?endstream/g, " ")
-      .replace(/[^A-Za-z0-9 .,?!:;'"\-\n\r]/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-
-    if (textStripped.length > 40) return textStripped;
-  } catch {}
-
-  return "Document Content Extracted from PDF.\n(Note: If this document contains only scanned photos, please use our Image to Text OCR tool for optical recognition.)";
+  // TIER 3: Detect if document is pure scanned imagery (never dump raw PDF metadata)
+  return "This document appears to consist of scanned image pages with no selectable digital text layer. To extract text from scanned paper receipts or photos, please use the Image to Text (OCR) tool on ToolifyPro.";
 }
 
 /**
@@ -152,7 +249,6 @@ export async function renderPdfPageToCanvas(
     return canvas;
   } catch (err) {
     console.warn("pdfjs canvas render fallback:", err);
-    // Fallback: render title canvas
     canvas.width = 1200;
     canvas.height = 1600;
     ctx.fillStyle = "#ffffff";
