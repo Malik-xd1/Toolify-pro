@@ -24,6 +24,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ToolWorkbench from "@/components/ToolWorkbench";
 import AdBanner from "@/components/ads/AdBanner";
+import ToolIcon from "@/components/ToolIcon";
 import { Tool, TOOLS, CATEGORIES, ToolCategory } from "@/data/toolsData";
 import { CATEGORY_DEFAULT_CONTENT } from "@/data/toolContentData";
 
@@ -236,6 +237,7 @@ export default function ToolPageClient({ tool }: ToolPageClientProps) {
 
         {/* Tool Page Hero Header */}
         <div className="text-center max-w-3xl mx-auto mb-8">
+          <ToolIcon tool={tool} size="xl" className="mx-auto mb-4 shadow-lg" />
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-cyan-400 border border-blue-200 dark:border-blue-800">
             <Sparkles className="w-3.5 h-3.5" />
             <span>{categoryInfo.name}</span>

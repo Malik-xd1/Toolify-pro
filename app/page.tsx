@@ -102,6 +102,7 @@ export default function Home() {
 
       {/* All Tools Directory Modal */}
       <AllToolsModal
+        key={isAllToolsOpen ? `open-${allToolsCategory}` : "closed"}
         isOpen={isAllToolsOpen}
         onClose={() => setIsAllToolsOpen(false)}
         onSelectTool={handleOpenTool}

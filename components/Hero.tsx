@@ -12,6 +12,7 @@ import {
   Archive,
 } from "lucide-react";
 import { TOOLS, Tool } from "@/data/toolsData";
+import ToolIcon from "@/components/ToolIcon";
 
 interface HeroProps {
   onSelectTool: (toolId: string) => void;
@@ -174,12 +175,7 @@ export default function Hero({ onSelectTool }: HeroProps) {
                       className="p-3.5 px-5 hover:bg-blue-50 dark:hover:bg-blue-600/20 cursor-pointer flex items-center justify-between group transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white"
-                          style={{ backgroundColor: tool.color || "#3B82F6" }}
-                        >
-                          {tool.category.toUpperCase().slice(0, 3)}
-                        </div>
+                        <ToolIcon tool={tool} size="md" />
                         <div>
                           <div className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors">
                             {tool.name}
