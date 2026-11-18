@@ -49,6 +49,7 @@ import {
   createDocxFromText,
   createPdfFromText,
   extractTextFromPdf,
+  renderPdfPageToCanvas,
 } from "@/utils/docxTools";
 import {
   compressImage,
@@ -456,48 +457,23 @@ export default function ToolWorkbench({
         setResultBlob(blob);
         setResultUrl(URL.createObjectURL(blob));
         setResultFileName(`${title}.pdf`);
-      } else if (tool.id === "pdf-to-image") {
-        if (files.length === 0) throw new Error("Please select a PDF file");
-        setProgress(40);
+      } else if (tool.id === "pdf-to-image" || tool.id === "pdf-to-jpg") {
+        if (files.length === 0) throw new Error("Please select a PDF file to convert to image");
+        setProgress(30);
         const arrayBuf = await files[0].arrayBuffer();
         const title = files[0].name.replace(/\.[^/.]+$/, "");
-        const canvas = document.createElement("canvas");
-        canvas.width = 1200;
-        canvas.height = 1600;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#1e293b";
-          ctx.font = "bold 34px sans-serif";
-          ctx.fillText(title, 80, 120);
-          ctx.fillStyle = "#64748b";
-          ctx.font = "20px sans-serif";
-          ctx.fillText("Rendered Page 1 — " + files[0].name, 80, 170);
-          ctx.strokeStyle = "#cbd5e1";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(80, 200);
-          ctx.lineTo(1120, 200);
-          ctx.stroke();
-
-          const text = await extractTextFromPdf(arrayBuf);
-          ctx.fillStyle = "#334155";
-          ctx.font = "18px monospace";
-          const lines = text.slice(0, 1500).split("\n");
-          let lineY = 250;
-          for (const l of lines) {
-            ctx.fillText(l.slice(0, 80), 80, lineY);
-            lineY += 28;
-            if (lineY > 1500) break;
-          }
-        }
-        const pngBlob: Blob = await new Promise((res) =>
-          canvas.toBlob((b) => res(b || new Blob()), "image/png")
+        setProgress(60);
+        const canvas = await renderPdfPageToCanvas(arrayBuf, 1, 2.0);
+        setProgress(90);
+        const isJpg = tool.id === "pdf-to-jpg";
+        const format = isJpg ? "image/jpeg" : "image/png";
+        const ext = isJpg ? "jpg" : "png";
+        const imgBlob: Blob = await new Promise((res) =>
+          canvas.toBlob((b) => res(b || new Blob()), format, 0.95)
         );
-        setResultBlob(pngBlob);
-        setResultUrl(URL.createObjectURL(pngBlob));
-        setResultFileName(`${title}-Page-1.png`);
+        setResultBlob(imgBlob);
+        setResultUrl(URL.createObjectURL(imgBlob));
+        setResultFileName(`${title}-Page-1.${ext}`);
       } else if (tool.id === "protect-pdf") {
         if (files.length === 0) throw new Error("Please select a PDF file to protect");
         if (!pdfPassword) throw new Error("Please enter a password to protect the PDF");

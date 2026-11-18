@@ -2,29 +2,45 @@
 
 import { PDFDocument, rgb } from "pdf-lib";
 import { cleanAndLoadPdf } from "./pdfTools";
+import { extractTextFromPdf } from "./docxTools";
 
 export async function convertPdfToExcelData(file: File): Promise<{ csvString: string; rowCount: number }> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdfDoc = await cleanAndLoadPdf(arrayBuffer);
-  const pageCount = pdfDoc.getPageCount();
+  const rawText = await extractTextFromPdf(arrayBuffer);
+  const lines = rawText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
 
-  // Extract structured representation
-  const rows: string[][] = [
-    ["Page Number", "Content Block", "Estimated Status", "Record Source"],
-  ];
+  const rows: string[][] = [];
 
-  for (let i = 0; i < pageCount; i++) {
-    const page = pdfDoc.getPage(i);
-    const { width, height } = page.getSize();
-    rows.push([
-      `Page ${i + 1}`,
-      `Dimensions: ${Math.round(width)}pt x ${Math.round(height)}pt`,
-      "Extracted Successfully",
-      file.name,
-    ]);
+  // Parse lines into columns (splitting on tabs, multiple spaces, commas, or pipes)
+  for (const line of lines) {
+    let cells: string[] = [];
+    if (line.includes("\t")) {
+      cells = line.split("\t");
+    } else if (line.includes("|")) {
+      cells = line.split("|").map((c) => c.trim()).filter(Boolean);
+    } else if (line.includes(",")) {
+      cells = line.split(",");
+    } else if (/\s{2,}/.test(line)) {
+      cells = line.split(/\s{2,}/);
+    } else {
+      cells = [line];
+    }
+
+    if (cells.length > 0) {
+      rows.push(cells.map((c) => c.trim()));
+    }
   }
 
-  const csvString = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+  // Ensure header row exists
+  if (rows.length === 0) {
+    rows.push(["Extracted Content", "Document Name"]);
+    rows.push(["No readable text data found in PDF", file.name]);
+  }
+
+  const csvString = rows
+    .map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))
+    .join("\r\n");
+
   return { csvString, rowCount: rows.length };
 }
 
